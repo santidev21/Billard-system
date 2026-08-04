@@ -39,3 +39,12 @@ Hub Endpoint: `/hubs/tables`
 ### 8. `AuditLogCreated`
 - **Publicado a**: Grupo `AllTables` (Solo Admin).
 - **Payload**: `AuditLogDto`.
+---
+
+## Estado Implementado Actual - 2026-08-04
+- `TableHub` existe en `backend/src/BilliardSystem.API/Hubs/TableHub.cs`.
+- Metodos disponibles:
+  - `JoinTableGroup(Guid tableId)`: une la conexion al grupo `table:{tableId}`.
+  - `LeaveTableGroup(Guid tableId)`: saca la conexion del grupo `table:{tableId}`.
+- Aun faltan handlers que emitan los eventos de servidor listados arriba.
+- El formato de grupo implementado es `table:{tableId}`; el formato `Table_{tableId}` queda como objetivo anterior a reconciliar.

@@ -42,3 +42,10 @@ Interface base: `IDomainEvent` en `BilliardSystem.Domain.Events`.
   - `SessionEndedPersistenceHandler`: Compone y guarda la entidad `MatchHistory` con todos sus score logs y consumos en SQLite.
   - `SessionEndedAuditHandler`: Registra la finalización de partida en auditoría.
   - `SessionEndedSignalRHandler`: Transmite `SessionEnded` para reiniciar la UI del marcador a 0.
+---
+
+## Estado Implementado Actual - 2026-08-04
+- `IDomainEvent` esta implementado en `BilliardSystem.Domain.Common`, no en `BilliardSystem.Domain.Events`.
+- Eventos implementados en `backend/src/BilliardSystem.Domain/Events/`.
+- Dispatcher interno implementado en `BilliardSystem.Infrastructure.Events.DomainEventDispatcher`.
+- Aun faltan handlers concretos de auditoria, persistencia estadistica y broadcast SignalR.

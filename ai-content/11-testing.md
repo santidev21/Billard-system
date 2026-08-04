@@ -27,3 +27,11 @@ Proyectos de pruebas en `backend/tests/`:
   cd frontend
   npm test
   ```
+---
+
+## Estado Implementado Actual - 2026-08-04
+- Proyecto real: `backend/tests/BilliardSystem.Tests`.
+- Tests actuales: `BilliardTableTests` valida inicio de sesion y rechazo de doble inicio en mesa ocupada.
+- Comando verificado: `dotnet test C:\Dev\Billard-system\backend\BilliardSystem.slnx`.
+- Resultado actual: 2 tests passed.
+- Nota: el primer `dotnet test` dentro del sandbox fallo por permiso leyendo `C:\Users\santi\AppData\Roaming\NuGet\NuGet.Config`; fuera del sandbox paso correctamente.

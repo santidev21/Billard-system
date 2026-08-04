@@ -95,3 +95,13 @@
 - `EntityType` (TEXT, NotNull)
 - `Details` (TEXT, NotNull)
 - `Timestamp` (TEXT/DATETIME, NotNull)
+---
+
+## Estado Implementado Actual - 2026-08-04
+- El repo esta actualmente en `net10.0` y EF Core 10, aunque el plan original menciona EF Core 9.
+- `BilliardDbContext` vive en `backend/src/BilliardSystem.Infrastructure/Persistence/BilliardDbContext.cs`.
+- La cadena actual es `ConnectionStrings:BilliardDatabase = Data Source=billiard-system.db`.
+- Las PK implementadas son `Guid`, no `INTEGER AutoIncrement`.
+- La base se crea temporalmente con `Database.EnsureCreatedAsync()` al arrancar la API.
+- Hay seed inicial para `Mesa 1`, `Mesa 2`, categoria `Bebidas`, producto `Agua`, `ReplayBufferSeconds` y `BusinessName`.
+- Aun no existen migraciones EF; antes de release conviene migrar de `EnsureCreated` a migraciones.

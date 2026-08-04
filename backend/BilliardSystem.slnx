@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BilliardSystem.API/BilliardSystem.API.csproj" />
+    <Project Path="src/BilliardSystem.Application/BilliardSystem.Application.csproj" />
+    <Project Path="src/BilliardSystem.Domain/BilliardSystem.Domain.csproj" />
+    <Project Path="src/BilliardSystem.Infrastructure/BilliardSystem.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BilliardSystem.Tests/BilliardSystem.Tests.csproj" />
+  </Folder>
+</Solution>

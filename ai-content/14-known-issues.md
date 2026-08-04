@@ -7,3 +7,8 @@
    - Para duraciones de buffer de 5 minutos en resolución 1080p, la memoria de la pestaña del navegador puede superar los 150 MB. Se recomienda configurar 720p @ 30 FPS en `Settings` para dispositivos con memoria RAM limitada (< 4 GB).
 3. **Bloqueo de Sockets por Antivirus/Firewall en Windows**:
    - Algunas configuraciones de Windows Firewall pueden bloquear el puerto 5000 para conexiones entrantes desde otras computadoras o celulares en la misma red LAN. Se debe agregar una regla de entrada en el Firewall para el puerto 5000 durante la instalación.
+---
+
+## Issue registrado 2026-08-04
+- `Microsoft.OpenApi 2.0.0` y `SQLitePCLRaw.lib.e_sqlite3 2.1.11` reportan warnings NU1903 de vulnerabilidad durante `dotnet build` y `dotnet test`.
+- Revisar upgrade, dependencia transitiva o supresion controlada antes de release.

@@ -39,3 +39,14 @@ Todos los endpoints REST están prefijados con `/api/v1`.
 ## 7. Configuración (`/api/v1/settings`)
 - `GET /api/v1/settings`: Obtiene la configuración del sistema (branding, tarifa default, buffer de replay).
 - `PUT /api/v1/settings`: Actualiza la configuración global (Admin).
+---
+
+## Estado Implementado Actual - 2026-08-04
+La API inicial usa prefijo `/api` sin versionado todavia:
+- `GET /api/health`
+- `GET /api/tables`
+- `GET /api/products`
+- `GET /api/settings`
+- `GET /api/dashboard/summary`
+
+Pendiente: decidir si se migra ahora a `/api/v1` o si se mantiene `/api` hasta completar los comandos de partida.

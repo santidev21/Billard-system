@@ -38,3 +38,19 @@
 
 ## Siguiente Tarea Recomendada
 Presentar el diseño técnico detallado de la **Fase 1 (Backend Architecture, Event Bus & Base de Datos)** al usuario para su revisión y aprobación antes de generar el código.
+---
+
+## Actualizacion 2026-08-04 - Fase 1 iniciada
+- **Porcentaje estimado actualizado**: 18%.
+- **Estado**: backend base compilable y probado.
+- **Implementado**:
+  - Entidades de dominio para mesas, usuarios, auditoria, settings, catalogo, historial, scores y consumos.
+  - Eventos de dominio principales e interfaces `IDomainEvent`, `IDomainEventDispatcher`, `IDomainEventHandler`.
+  - `BilliardDbContext` con EF Core SQLite, seed inicial y `EnsureCreatedAsync`.
+  - `TableHub` SignalR con grupos `table:{tableId}`.
+  - Endpoints iniciales: `/api/health`, `/api/tables`, `/api/products`, `/api/settings`, `/api/dashboard/summary`.
+  - Tests xUnit iniciales para reglas de inicio de sesion de mesa.
+- **Verificacion**:
+  - `dotnet build C:\Dev\Billard-system\backend\BilliardSystem.slnx` compila.
+  - `dotnet test C:\Dev\Billard-system\backend\BilliardSystem.slnx` pasa 2/2 tests fuera del sandbox.
+- **Siguiente tarea recomendada**: implementar comandos de partida con auditoria e idempotencia por `TransactionId`.

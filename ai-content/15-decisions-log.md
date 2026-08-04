@@ -29,3 +29,13 @@
 - **Contexto**: Facilitar el desarrollo con Hot-Reload y permitir la instalación en el cliente en un solo clic.
 - **Decisión**: `Dev Mode` con `ng serve` + API separada; `Prod Mode` hospedando los archivos estáticos de Angular dentro de la API en Kestrel.
 - **Razón**: Ofrece la mejor experiencia de desarrollo y despliegue sin fricción para el usuario final.
+
+## ADR-007: Estado actual en .NET 10 / EF Core 10
+- **Contexto**: El proyecto creado por la sesion anterior quedo en `net10.0` y paquetes `10.0.10`, aunque el plan mencionaba .NET/EF 9.
+- **Decision**: Mantener `net10.0` por ahora para respetar el estado real del repo y evitar churn temprano.
+- **Razon**: El SDK disponible en la maquina es .NET 10.0.302 y la solucion compila/tests pasan. Si se requiere LTS o compatibilidad mas conservadora, hacer downgrade coordinado a .NET 8 antes de Fase 2.
+
+## ADR-008: Inicializacion temporal de base con EnsureCreated
+- **Contexto**: Se necesita una API ejecutable rapido mientras se completa el modelo.
+- **Decision**: Usar `Database.EnsureCreatedAsync()` temporalmente y seed en `OnModelCreating`.
+- **Razon**: Reduce friccion durante la iteracion inicial. Antes de release se debe pasar a migraciones EF para control de cambios de esquema.

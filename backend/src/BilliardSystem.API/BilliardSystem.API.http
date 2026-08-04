@@ -1,0 +1,6 @@
+@BilliardSystem.API_HostAddress = http://localhost:5168
+
+GET {{BilliardSystem.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
