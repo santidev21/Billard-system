@@ -308,7 +308,7 @@ public static class BilliardEndpoints
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
                 tableId = id,
-                item = new ConsumptionAmountResponse(consumption.Id, product.Name, product.Price, request.Quantity, product.Price * request.Quantity),
+                item = new ConsumptionAmountResponse(consumption.Id, product.Name, product.Price, request.Quantity, product.Price * request.Quantity, consumption.CreatedAt),
                 consumptionTotal = match.ConsumptionTotal
             }, cancellationToken);
 
@@ -424,6 +424,50 @@ public static class BilliardEndpoints
             return Results.Ok(new FinishSessionResponse(match.Id, match.GrandTotal));
         });
 
+        api.MapPost("/tables/{id}/finish-round", async (
+            Guid id,
+            TableRequest request,
+            BilliardDbContext dbContext,
+            IHubContext<TableHub> hub,
+            CancellationToken cancellationToken) =>
+        {
+            if (await IsIdempotentAsync(dbContext, request.TransactionId, cancellationToken))
+            {
+                return Results.Ok();
+            }
+
+            var table = await dbContext.Tables.FirstOrDefaultAsync(table => table.Id == id, cancellationToken);
+            if (table?.ActiveMatchId is not { } matchId)
+            {
+                return Results.BadRequest("No hay partida activa.");
+            }
+
+            var match = await dbContext.MatchHistories.FirstOrDefaultAsync(history => history.Id == matchId, cancellationToken);
+            if (match is null)
+            {
+                return Results.NotFound();
+            }
+
+            var round = match.CloseRound();
+            dbContext.MatchRounds.Add(round);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await WriteAuditAsync(dbContext, AuditActionType.RoundCompleted, request.UserId, table.Id, match.Id, request.TransactionId,
+                round.WinnerName is null ? $"Ronda {round.RoundNumber} en {table.Name}: empate {round.WhiteScore}-{round.YellowScore}"
+                    : $"Ronda {round.RoundNumber} en {table.Name}: gana {round.WinnerName} {round.WhiteScore}-{round.YellowScore}", cancellationToken);
+
+            await hub.Clients.Group($"table:{id}").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
+            {
+                tableId = id,
+                playerColor = "white",
+                delta = 0,
+                newScore = 0,
+                totalCarambolas = 0
+            }, cancellationToken);
+
+            return Results.Ok(new RoundResponse(round.Id, round.RoundNumber, round.WhiteScore, round.YellowScore, round.WinnerName));
+        });
+
         api.MapGet("/matches", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             var matches = await dbContext.MatchHistories
@@ -514,7 +558,7 @@ public static class BilliardEndpoints
         match.EndedAt is { } endedAt ? endedAt - match.StartedAt : TimeSpan.Zero,
         match.ConsumptionTotal,
         match.Consumptions.Select(consumption => new ConsumptionAmountResponse(
-            consumption.Id, consumption.ProductNameSnapshot, consumption.UnitPriceSnapshot, consumption.Quantity, consumption.Total)).ToArray());
+            consumption.Id, consumption.ProductNameSnapshot, consumption.UnitPriceSnapshot, consumption.Quantity, consumption.Total, consumption.CreatedAt)).ToArray());
 
     private static async Task<bool> IsIdempotentAsync(BilliardDbContext dbContext, Guid? transactionId, CancellationToken cancellationToken)
     {
@@ -576,12 +620,12 @@ public sealed record CreateProductRequest(Guid CategoryId, string Name, decimal 
 public sealed record UpdateProductRequest(string Name, decimal Price);
 public sealed record TableRequest(Guid? TransactionId, Guid? UserId);
 public sealed record FinishSessionRequest(Guid? TransactionId, Guid? ClosedByUserId);
-public sealed record StartSessionResponse(Guid TableId, Guid MatchId);
-public sealed record ScoreResponse(int NewScore);
+public sealed record StartSessionResponse(Guid TableId, Guid MatchId);public sealed record ScoreResponse(int NewScore);
 public sealed record ConsumptionAddedResponse(decimal ConsumptionTotal);
 public sealed record FinishSessionResponse(Guid MatchHistoryId, decimal GrandTotal);
+public sealed record RoundResponse(Guid Id, int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName);
 
-public sealed record ConsumptionAmountResponse(Guid Id, string ProductName, decimal UnitPrice, int Quantity, decimal Total);
+public sealed record ConsumptionAmountResponse(Guid Id, string ProductName, decimal UnitPrice, int Quantity, decimal Total, DateTimeOffset CreatedAt);
 
 public sealed record MatchListItemResponse(
     Guid Id,

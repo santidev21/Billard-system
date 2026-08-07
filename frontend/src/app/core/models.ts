@@ -16,6 +16,7 @@ export interface ConsumptionAmount {
   unitPrice: number;
   quantity: number;
   total: number;
+  createdAt: string;
 }
 
 export interface MatchDetail {
@@ -28,6 +29,7 @@ export interface MatchDetail {
   startedAt: string;
   elapsed: string;
   consumptionTotal: number;
+  roundNumber: number;
   consumptions: ConsumptionAmount[];
 }
 

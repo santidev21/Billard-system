@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, AfterViewInit, OnChanges } from '@angular/core';
 
 @Component({
   selector: 'app-replay-player',
@@ -6,13 +6,20 @@ import { Component, EventEmitter, Input, Output, ViewChild, AfterViewInit } from
   styleUrls: ['./replay-player.component.css'],
   standalone: true,
 })
-export class ReplayPlayerComponent implements AfterViewInit {
+export class ReplayPlayerComponent implements AfterViewInit, OnChanges {
   @Input() src: string | null = null;
   @Input() open = false;
   @Output() closed = new EventEmitter<void>();
   @ViewChild('videoEl') videoEl: any;
 
   playbackRate = 1;
+
+  ngOnChanges(): void {
+    if (this.open && this.src) {
+      // apply src each time it changes so the video element actually loads it
+      this.setup();
+    }
+  }
 
   ngAfterViewInit(): void {
     this.setup();
@@ -24,6 +31,7 @@ export class ReplayPlayerComponent implements AfterViewInit {
       el.src = this.src;
       el.playbackRate = this.playbackRate;
       el.load();
+      el.play().catch(() => undefined);
     }
   }
 
@@ -46,7 +54,7 @@ export class ReplayPlayerComponent implements AfterViewInit {
     const el = this.videoEl?.nativeElement as HTMLVideoElement;
     if (el) {
       if (el.paused) {
-        el.play();
+        el.play().catch(() => undefined);
       } else {
         el.pause();
       }

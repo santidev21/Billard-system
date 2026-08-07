@@ -47,11 +47,22 @@ export class CircularVideoBuffer {
   }
 
   async captureFrame(): Promise<string | null> {
-    const endedAt = Date.now();
+    // Flush pending media data so the resulting WebM has a complete init segment
+    // and is actually playable while the recorder keeps running.
+    if (this.recorder && this.recorder.state !== 'inactive') {
+      try {
+        this.recorder.requestData();
+      } catch {
+        // recorder may not support requestData; continue with existing chunks
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 150));
+    }
     const inWindow = this.chunks.filter((_, i) => i >= this.chunks.length - this.maxChunks);
-    const blob = new Blob(inWindow, { type: this.recorder ? 'video/webm' : 'video/mp4' });
-    const url = URL.createObjectURL(blob);
-    return url;
+    if (inWindow.length === 0) {
+      return null;
+    }
+    const blob = new Blob(inWindow, { type: 'video/webm' });
+    return URL.createObjectURL(blob);
   }
 
   stop(): void {

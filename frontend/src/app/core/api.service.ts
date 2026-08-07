@@ -65,6 +65,11 @@ export class ApiService {
   finishSession(id: string, transactionId: string): Promise<{ matchHistoryId: string; grandTotal: number }> {
     return lastValueFrom(this.http.post<{ matchHistoryId: string; grandTotal: number }>(`${this.base}/tables/${id}/finish`, { transactionId }));
   }
+  finishRound(id: string, transactionId: string): Promise<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }> {
+    return lastValueFrom(
+      this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/tables/${id}/finish-round`, { transactionId })
+    );
+  }
 
   // Catalog
   getProducts(): Promise<ProductCategory[]> {

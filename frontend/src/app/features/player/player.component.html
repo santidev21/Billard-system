@@ -1,10 +1,15 @@
-<section class="panel">
-  <app-camera-view />
+<section class="player-shell">
   <header class="panel-head">
+    <div class="table-badge">MESA: {{ tableNumber() }}</div>
     <h2>{{ tableName() }}</h2>
     <div class="mode-switch">
-      <button [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
-      <button [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
+      @if (gameMode() !== 'FreeMode') {
+        <button [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
+        <button [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
+      } @else {
+        <button class="active">Modo Libre</button>
+        <button (click)="selectMode('Managed')">Administrado</button>
+      }
     </div>
   </header>
 
@@ -19,89 +24,130 @@
       <button class="btn btn-primary big" (click)="startSession()">Iniciar Partida</button>
     </div>
   } @else {
-    <div class="scorecard glass">
-      <div class="player player-white">
-        <span class="ball white"></span>
-        <span class="player-name">{{ whiteName() }}</span>
-        <span class="score">{{ whiteScore() }}</span>
+    <div class="arena">
+      <div class="side player-white">
+        <div class="badge">JUGADOR 1</div>
+        <div class="ball white"></div>
+        <button class="score-btn white" (click)="addScore('white', 1)">{{ whiteScore() }}</button>
         <div class="score-btns">
-          <button (click)="addScore('white', +5)">+5</button>
-          <button (click)="addScore('white', +3)">+3</button>
+          <button class="neg" (click)="addScore('white', -1)">−1</button>
           <button (click)="addScore('white', +2)">+2</button>
-          <button (click)="addScore('white', +1)">+1</button>
-          <button (click)="addScore('white', -1)">-1</button>
+          <button (click)="addScore('white', +3)">+3</button>
+          <button (click)="addScore('white', +5)">+5</button>
+        </div>
+        <div class="player-name">
+          <input [value]="whiteName()" (change)="renamePlayer('white', $any($event.target).value)" />
         </div>
       </div>
 
-      <div class="timer-row">
-        <span class="timer">{{ elapsed() }}</span>
-        <span class="carambolas">Carambolas: {{ totalCarambolas() }}</span>
+      <div class="center-col">
+        <app-camera-view />
+        <div class="virtual-table">
+          <div class="table-felt">
+            <div class="pocket p0"></div>
+            <div class="pocket p1"></div>
+            <div class="pocket p2"></div>
+            <div class="pocket p3"></div>
+            <div class="pocket p4"></div>
+            <div class="player-ball w-ball"></div>
+            <div class="player-ball y-ball"></div>
+            <div class="t-head">Tres Bandas</div>
+            <div class="t-carambolas">Carambolas: {{ totalCarambolas() }}</div>
+          </div>
+        </div>
+        <div class="info-bar glass">
+          <div class="timer-block">
+            <span class="label">Tiempo</span>
+            <span class="timer">{{ elapsed() }}</span>
+          </div>
+          <div class="money-block">
+            <span class="label">Consumos</span>
+            <span class="amt">${{ consumptionTotalText() }}</span>
+          </div>
+          <div class="money-block">
+            <span class="label">Tiempo</span>
+            <span class="amt">${{ timeCostText() }}</span>
+          </div>
+          <div class="money-block grand">
+            <span class="label">Total</span>
+            <span class="amt">${{ grandTotalText() }}</span>
+          </div>
+        </div>
       </div>
 
-      <div class="player player-yellow">
-        <span class="ball yellow"></span>
-        <span class="player-name">{{ yellowName() }}</span>
-        <span class="score">{{ yellowScore() }}</span>
+      <div class="side player-yellow">
+        <div class="badge">JUGADOR 2</div>
+        <div class="ball yellow"></div>
+        <button class="score-btn yellow" (click)="addScore('yellow', 1)">{{ yellowScore() }}</button>
         <div class="score-btns">
-          <button (click)="addScore('yellow', -1)">-1</button>
-          <button (click)="addScore('yellow', +1)">+1</button>
-          <button (click)="addScore('yellow', +2)">+2</button>
-          <button (click)="addScore('yellow', +3)">+3</button>
           <button (click)="addScore('yellow', +5)">+5</button>
+          <button (click)="addScore('yellow', +3)">+3</button>
+          <button (click)="addScore('yellow', +2)">+2</button>
+          <button class="neg" (click)="addScore('yellow', -1)">−1</button>
+        </div>
+        <div class="player-name">
+          <input [value]="yellowName()" (change)="renameName($event, 'yellow')" />
         </div>
       </div>
     </div>
 
-    <div class="consumo glass">
-      <h3>Consumos</h3>
-      @if (products().length) {
-        <div class="product-picker">
-          <select [(ngModel)]="selectedProductId">
-            <option value="" disabled>Elegir producto</option>
-            @for (p of products(); track p.id) {
-              <option [value]="p.id">{{ p.name }} — ${{ p.price }}</option>
-            }
-          </select>
-          @if (gameMode() !== 'FreeMode') {
-            <button class="btn btn-primary" (click)="addConsumption(selectedProductId)" [disabled]="!selectedProductId">Agregar</button>
-          }
-        </div>
-      }
-      <ul class="consumo-list">
-        @for (c of consumptions(); track c.id) {
-          <li><span>{{ c.name }}</span><span>x{{ c.qty }}</span><span>${{ c.total }}</span></li>
-        }
-      </ul>
-      <div class="totals">
-        <div>Tiempo <b>${{ timeCost() }}</b></div>
-        <div>Consumos <b>${{ consumptionTotal() }}</b></div>
-        <div class="grand">Total <b>${{ grandTotal() }}</b></div>
-      </div>
-    </div>
-
-    <div class="actions">
+    <div class="toolbar glass">
       @if (gameMode() !== 'FreeMode') {
-        <button
-          class="btn btn-outline"
-          [class.sent]="requestSent() === 'waiter'"
-          (click)="callWaiter()">
+        <button class="btn btn-outline" [class.sent]="requestSent() === 'waiter'" (click)="callWaiter()">
           {{ requestSent() === 'waiter' ? '✓ Llamado' : 'Llamar Mesero' }}
         </button>
-        <button
-          class="btn btn-outline"
-          [class.sent]="requestSent() === 'check'"
-          (click)="requestCheck()">
+        <button class="btn btn-outline" [class.sent]="requestSent() === 'check'" (click)="requestCheck()">
           {{ requestSent() === 'check' ? '✓ Solicitado' : 'Pedir Cuenta' }}
         </button>
       }
+      <button class="btn btn-outline" (click)="showConsumptionLog.set(true)">Ver Consumo</button>
+      <button class="btn btn-primary" (click)="finishRound()">Finalizar Ronda</button>
       <button class="btn btn-danger long" (click)="onRequestClose()">Terminar Partida</button>
     </div>
+
+    @if (lastRound(); as last) {
+      <div class="round-toast">{{ last }}</div>
+    }
   }
+
+  <footer class="brand">VirtualScore</footer>
 </section>
 
-<app-slide-confirm
-  [open]="showConfirm()"
-  title="Confirmar cierre de partida"
-  message="Arrastra el control para finalizar. En modo libre se exige confirmación por seguridad."
-  (confirmed)="finishConfirmed()"
-  (cancelled)="onConfirmCancelled()" />
+@if (showConsumptionLog()) {
+  <div class="consumption-log overlay">
+    <div class="card">
+      <header>
+        <h3>Consumo de Mesa ({{ consumptions().length }})</h3>
+        <button class="btn btn-outline close" (click)="showConsumptionLog.set(false)">✕</button>
+      </header>
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          @for (c of consumptions(); track c.id) {
+            <tr>
+              <td>{{ formatAt(c.at) }}</td>
+              <td>{{ c.name }}</td>
+              <td>x{{ c.qty }}</td>
+              <td>${{ fmt(c.total) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@if (showConfirm()) {
+  <div class="confirm overlay">
+    <div class="card">
+      <h3>¿Confirmar cierre de partida?</h3>
+      <p class="msg">Se guardará el historial y la mesa quedará libre (total ${{ grandTotalText() }}).</p>
+      <div class="confirm-actions">
+        <button class="btn btn-danger" (click)="finishConfirmed()">Sí, terminar</button>
+        <button class="btn btn-outline" (click)="onConfirmCancelled()">No</button>
+      </div>
+    </div>
+  </div>
+}

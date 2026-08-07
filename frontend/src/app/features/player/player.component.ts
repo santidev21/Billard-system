@@ -6,7 +6,6 @@ import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { GameMode, TableDetail } from '../../core/models';
-import { SlideConfirmComponent } from '../../shared/slide-confirm.component';
 import { CameraViewComponent } from './camera-view.component';
 
 interface UiConsumption {
@@ -14,11 +13,12 @@ interface UiConsumption {
   name: string;
   qty: number;
   total: number;
+  at: string;
 }
 
 @Component({
   selector: 'app-player',
-  imports: [FormsModule, SlideConfirmComponent, CameraViewComponent],
+  imports: [FormsModule, CameraViewComponent],
   templateUrl: './player.component.html',
   styleUrls: ['./player.component.css'],
   standalone: true,
@@ -41,15 +41,17 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly tableName = signal('Mesa');
   readonly running = signal(false);
   readonly showConfirm = signal(false);
+  readonly showConsumptionLog = signal(false);
+  readonly roundNumber = signal(0);
+  readonly lastRound = signal<string | null>(null);
   readonly requestSent = signal<'waiter' | 'check' | null>(null);
   readonly products = signal<{ id: string; name: string; price: number }[]>([]);
 
   readonly totalCarambolas = computed(() => this.whiteScore() + this.yellowScore());
-  readonly timeCost = computed(() => {
-    const rate = Number(this.hourlyRate());
-    return (this.elapsedSeconds() / 3600) * rate;
+  readonly tableNumber = computed(() => {
+    const match = this.tableName().match(/\d+/);
+    return match ? match[0] : this.tableName();
   });
-  readonly grandTotal = computed(() => this.timeCost() + this.consumptionTotal());
   readonly elapsed = computed(() => {
     const s = this.elapsedSeconds();
     const h = String(Math.floor(s / 3600));
@@ -59,6 +61,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
   });
 
   readonly hourlyRate = signal(String(localStorage.getItem('defaultRate') ?? '12000'));
+
+  readonly timeCost = computed(() => {
+    const rate = Number(this.hourlyRate());
+    return (this.elapsedSeconds() / 3600) * rate;
+  });
+  readonly grandTotal = computed(() => this.timeCost() + this.consumptionTotal());
+  readonly timeCostText = computed(() => this.fmtMoney(this.timeCost()));
+  readonly consumptionTotalText = computed(() => this.fmtMoney(this.consumptionTotal()));
+  readonly grandTotalText = computed(() => this.fmtMoney(this.grandTotal()));
+
+  private fmtMoney(value: number): string {
+    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  readonly fmt = (value: number): string => this.fmtMoney(value);
+
+  renameName(event: Event, color: 'white' | 'yellow'): void {
+    const input = event.target as HTMLInputElement;
+    void this.renamePlayer(color, input.value);
+  }
 
   whiteInput = 'Jugador 1';
   yellowInput = 'Jugador 2';
@@ -77,9 +99,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
       if (id) {
         await this.loadTable(id);
         await this.signalr.joinTable(id);
+      } else {
+        await this.autoSelectTable();
       }
     });
     await this.loadProducts();
+  }
+
+  private async autoSelectTable(): Promise<void> {
+    try {
+      const tables = await this.api.getTables();
+      const pick = tables.find((t) => t.status === 'Available') ?? tables[0];
+      if (pick) {
+        this.tableId.set(pick.id);
+        this.tableName.set(pick.name);
+        await this.loadTable(pick.id);
+        await this.signalr.joinTable(pick.id);
+      }
+    } catch {
+      // offline
+    }
   }
 
   private async loadProducts(): Promise<void> {
@@ -123,7 +162,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteScore.set(m.whiteScore);
     this.yellowScore.set(m.yellowScore);
     this.consumptionTotal.set(m.consumptionTotal);
-    this.consumptions.set(m.consumptions.map((c) => ({ id: c.id, name: c.productName, qty: c.quantity, total: c.total })));
+    this.consumptions.set(m.consumptions.map((c) => ({ id: c.id, name: c.productName, qty: c.quantity, total: c.total, at: c.createdAt })));
+    this.roundNumber.set(m.roundNumber);
     this.startTimer();
   }
 
@@ -149,6 +189,49 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if (navigator.onLine) {
       this.api.renamePlayers(this.tableId(), this.whiteName(), this.yellowName(), this.genTx()).catch(() => undefined);
     }
+  }
+
+  async renamePlayer(color: 'white' | 'yellow', name: string): Promise<void> {
+    const value = name.trim();
+    if (!value) {
+      return;
+    }
+    if (color === 'white') {
+      this.whiteName.set(value);
+    } else {
+      this.yellowName.set(value);
+    }
+    if (navigator.onLine) {
+      await this.api
+        .renamePlayers(this.tableId(), this.whiteName(), this.yellowName(), this.genTx())
+        .catch(() => undefined);
+    }
+  }
+
+  async finishRound(): Promise<void> {
+    const tx = this.genTx();
+    if (navigator.onLine) {
+      try {
+        const r = await this.api.finishRound(this.tableId(), tx);
+        this.roundNumber.set(r.roundNumber);
+        this.lastRound.set(r.winnerName ? `Ronda ${r.roundNumber}: gana ${r.winnerName}` : `Ronda ${r.roundNumber}: empate`);
+        setTimeout(() => this.lastRound.set(null), 4000);
+      } catch {
+        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', tableId: this.tableId(), payload: {} });
+      }
+    } else {
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', tableId: this.tableId(), payload: {} });
+    }
+    this.whiteScore.set(0);
+    this.yellowScore.set(0);
+  }
+
+  formatAt(value: string | undefined): string {
+    if (!value) {
+      return '';
+    }
+    const d = new Date(value);
+    return `${d.toLocaleDateString('es', { day: '2-digit', month: 'short' })} ${d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`;
   }
 
   async addScore(color: 'white' | 'yellow', delta: number): Promise<void> {
@@ -217,7 +300,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return;
     }
     const tx = this.genTx();
-    this.consumptions.update((list) => [...list, { id: crypto.randomUUID(), name: product.name, qty: 1, total: product.price }]);
+    this.consumptions.update((list) => [...list, { id: crypto.randomUUID(), name: product.name, qty: 1, total: product.price, at: new Date().toISOString() }]);
     this.consumptionTotal.update((t) => t + product.price);
 
     if (!navigator.onLine) {
@@ -261,6 +344,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.elapsedSeconds.set(0);
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
+    this.roundNumber.set(0);
     this.whiteName.set('Jugador 1');
     this.yellowName.set('Jugador 2');
     this.whiteInput = 'Jugador 1';

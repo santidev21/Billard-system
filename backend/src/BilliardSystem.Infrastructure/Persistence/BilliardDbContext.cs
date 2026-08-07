@@ -33,6 +33,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
     public DbSet<BilliardTable> Tables => Set<BilliardTable>();
     public DbSet<MatchConsumption> MatchConsumptions => Set<MatchConsumption>();
     public DbSet<MatchHistory> MatchHistories => Set<MatchHistory>();
+    public DbSet<MatchRound> MatchRounds => Set<MatchRound>();
     public DbSet<MatchScoreLog> MatchScoreLogs => Set<MatchScoreLog>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductCategory> Categories => Set<ProductCategory>();
@@ -135,6 +136,16 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
                 .HasForeignKey(match => match.TableId);
             builder.Navigation(match => match.ScoreLogs).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(match => match.Consumptions).UsePropertyAccessMode(PropertyAccessMode.Field);
+            builder.Navigation(match => match.Rounds).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<MatchRound>(builder =>
+        {
+            builder.ToTable("MatchRounds");
+            builder.HasKey(round => round.Id);
+            builder.HasOne(round => round.MatchHistory)
+                .WithMany(match => match.Rounds)
+                .HasForeignKey(round => round.MatchHistoryId);
         });
 
         modelBuilder.Entity<MatchScoreLog>(builder =>

@@ -7,6 +7,7 @@ public sealed class MatchHistory : Entity
 {
     private readonly List<MatchScoreLog> _scoreLogs = [];
     private readonly List<MatchConsumption> _consumptions = [];
+    private readonly List<MatchRound> _rounds = [];
 
     private MatchHistory()
     {
@@ -38,8 +39,10 @@ public sealed class MatchHistory : Entity
     public string SystemVersion { get; private set; } = "0.1.0";
     public Guid? OpenedByUserId { get; private set; }
     public Guid? ClosedByUserId { get; private set; }
+    public int RoundNumber { get; private set; }
     public IReadOnlyCollection<MatchScoreLog> ScoreLogs => _scoreLogs.AsReadOnly();
     public IReadOnlyCollection<MatchConsumption> Consumptions => _consumptions.AsReadOnly();
+    public IReadOnlyCollection<MatchRound> Rounds => _rounds.AsReadOnly();
 
     public int TotalCarambolas => WhiteScore + YellowScore;
 
@@ -93,5 +96,23 @@ public sealed class MatchHistory : Entity
         ConsumptionTotal = consumptionTotal;
         GrandTotal = tableTotal + consumptionTotal;
         ClosedByUserId = closedByUserId;
+    }
+
+    public MatchRound CloseRound()
+    {
+        RoundNumber += 1;
+        var winnerName = WhiteScore > YellowScore
+            ? WhitePlayerName
+            : YellowScore > WhiteScore
+                ? YellowPlayerName
+                : null;
+
+        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName);
+        _rounds.Add(round);
+
+        WhiteScore = 0;
+        YellowScore = 0;
+        _scoreLogs.Clear();
+        return round;
     }
 }

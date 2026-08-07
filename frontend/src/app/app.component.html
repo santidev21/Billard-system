@@ -1,19 +1,24 @@
 <header class="topbar">
   <a class="brand" routerLink="/play"><span class="dot"></span> Billiard <span class="dot yellow"></span> Tres Bandas</a>
-  <nav class="nav">
-    <a routerLink="/play" routerLinkActive="active">Jugador</a>
-    <a routerLink="/admin" routerLinkActive="active">Admin</a>
-    <a routerLink="/catalog" routerLinkActive="active">Catálogo</a>
-    <a routerLink="/history" routerLinkActive="active">Historial</a>
-    <a routerLink="/audit" routerLinkActive="active">Auditoría</a>
-  </nav>
-  <div class="status">
-    <span class="pill" [class.ok]="online()" [class.off]="!online()">Net {{ online() ? 'ON' : 'OFF' }}</span>
-    <span class="pill" [class.ok]="connected()" [class.off]="!connected()">Realtime {{ connected() ? 'OK' : '…' }}</span>
-    @if (pendingCommands() > 0) {
-      <span class="pill queue">Offline: {{ pendingCommands() }}</span>
-    }
-  </div>
+
+  @if (isAdminArea()) {
+    <nav class="nav">
+      <a routerLink="/play" routerLinkActive="active">Jugador</a>
+      <a routerLink="/admin" routerLinkActive="active">Admin</a>
+      <a routerLink="/catalog" routerLinkActive="active">Catálogo</a>
+      <a routerLink="/history" routerLinkActive="active">Historial</a>
+      <a routerLink="/audit" routerLinkActive="active">Auditoría</a>
+    </nav>
+    <div class="status">
+      <span class="pill" [class.ok]="online()" [class.off]="!online()">Net {{ online() ? 'ON' : 'OFF' }}</span>
+      <span class="pill" [class.ok]="connected()" [class.off]="!connected()">Realtime {{ connected() ? 'OK' : '…' }}</span>
+      @if (pendingCommands() > 0) {
+        <span class="pill queue">Offline: {{ pendingCommands() }}</span>
+      }
+    </div>
+  } @else {
+    <span class="muted">Panel de jugador</span>
+  }
 </header>
 
 <main class="shell">

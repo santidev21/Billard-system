@@ -39,21 +39,20 @@ export class DashboardComponent implements OnInit {
   }
 
   private async refresh(): Promise<void> {
-    const [tables, summary, top, details] = await Promise.all([
+    const [tables, summary, top] = await Promise.all([
       this.api.getTables(),
       this.api.getDashboardSummary(),
       this.api.getTopProducts().catch(() => [] as TopProduct[]),
-      this.loadDetails(),
     ]);
     this.tables.set(tables);
     this.summary.set(summary);
     this.topProducts.set(top);
-    this.details.set(details);
+    this.details.set(await this.loadDetails(tables));
   }
 
-  private async loadDetails(): Promise<Record<string, TableDetail>> {
+  private async loadDetails(tables: TableResponse[]): Promise<Record<string, TableDetail>> {
     const result: Record<string, TableDetail> = {};
-    for (const table of this.tables()) {
+    for (const table of tables) {
       try {
         result[table.id] = await this.api.getTable(table.id);
       } catch {
