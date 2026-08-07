@@ -1,0 +1,13 @@
+<div class="cam glass">
+  <div class="feed-wrap">
+    <video #liveVideo autoplay muted playsinline class="live"></video>
+    <div class="live-indicator" [class.on]="active()">
+      <span class="dot"></span> {{ active() ? 'EN VIVO' : 'OFFLINE' }}
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn btn-primary" (click)="openReplay()">Ver Repetición</button>
+  </div>
+</div>
+
+<app-replay-player [open]="replayOpen()" [src]="replayUrl()" (closed)="closeReplay()" />

@@ -1,0 +1,7 @@
+.page-title { margin: 0 0 1rem; }
+.table-wrap { padding: 0.5rem 1rem 1rem; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+td { color: var(--text-primary); font-size: 0.95rem; }
+.empty { color: var(--text-muted); text-align: center; }

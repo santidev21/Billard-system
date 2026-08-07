@@ -3,8 +3,20 @@ using BilliardSystem.Domain.Common;
 using BilliardSystem.Domain.Entities;
 using BilliardSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BilliardSystem.Infrastructure.Persistence;
+
+public sealed class DateTimeOffsetToTicksConverter : ValueConverter<DateTimeOffset, long>
+{
+    public DateTimeOffsetToTicksConverter()
+        : base(
+            value => value.UtcTicks,
+            value => new DateTimeOffset(value, TimeSpan.Zero))
+    {
+    }
+}
 
 public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 {
@@ -48,6 +60,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigureDateTimeOffsetAsTicks(modelBuilder);
+
         modelBuilder.Entity<BilliardTable>(builder =>
         {
             builder.ToTable("Tables");
@@ -149,6 +163,22 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
         });
 
         Seed(modelBuilder);
+    }
+
+    private static void ConfigureDateTimeOffsetAsTicks(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTimeOffset) || property.ClrType == typeof(DateTimeOffset?))
+                {
+                    var nullable = property.ClrType == typeof(DateTimeOffset?);
+                    var converterType = typeof(DateTimeOffsetToTicksConverter);
+                    property.SetValueConverter((ValueConverter)Activator.CreateInstance(converterType)!);
+                }
+            }
+        }
     }
 
     private static void Seed(ModelBuilder modelBuilder)

@@ -1,0 +1,107 @@
+<section class="panel">
+  <app-camera-view />
+  <header class="panel-head">
+    <h2>{{ tableName() }}</h2>
+    <div class="mode-switch">
+      <button [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
+      <button [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
+    </div>
+  </header>
+
+  @if (!running()) {
+    <div class="start-box">
+      <div class="names">
+        <label>Jugador 1 (Blanco)</label>
+        <input [(ngModel)]="whiteInput" placeholder="Jugador 1" />
+        <label>Jugador 2 (Amarillo)</label>
+        <input [(ngModel)]="yellowInput" placeholder="Jugador 2" />
+      </div>
+      <button class="btn btn-primary big" (click)="startSession()">Iniciar Partida</button>
+    </div>
+  } @else {
+    <div class="scorecard glass">
+      <div class="player player-white">
+        <span class="ball white"></span>
+        <span class="player-name">{{ whiteName() }}</span>
+        <span class="score">{{ whiteScore() }}</span>
+        <div class="score-btns">
+          <button (click)="addScore('white', +5)">+5</button>
+          <button (click)="addScore('white', +3)">+3</button>
+          <button (click)="addScore('white', +2)">+2</button>
+          <button (click)="addScore('white', +1)">+1</button>
+          <button (click)="addScore('white', -1)">-1</button>
+        </div>
+      </div>
+
+      <div class="timer-row">
+        <span class="timer">{{ elapsed() }}</span>
+        <span class="carambolas">Carambolas: {{ totalCarambolas() }}</span>
+      </div>
+
+      <div class="player player-yellow">
+        <span class="ball yellow"></span>
+        <span class="player-name">{{ yellowName() }}</span>
+        <span class="score">{{ yellowScore() }}</span>
+        <div class="score-btns">
+          <button (click)="addScore('yellow', -1)">-1</button>
+          <button (click)="addScore('yellow', +1)">+1</button>
+          <button (click)="addScore('yellow', +2)">+2</button>
+          <button (click)="addScore('yellow', +3)">+3</button>
+          <button (click)="addScore('yellow', +5)">+5</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="consumo glass">
+      <h3>Consumos</h3>
+      @if (products().length) {
+        <div class="product-picker">
+          <select [(ngModel)]="selectedProductId">
+            <option value="" disabled>Elegir producto</option>
+            @for (p of products(); track p.id) {
+              <option [value]="p.id">{{ p.name }} — ${{ p.price }}</option>
+            }
+          </select>
+          @if (gameMode() !== 'FreeMode') {
+            <button class="btn btn-primary" (click)="addConsumption(selectedProductId)" [disabled]="!selectedProductId">Agregar</button>
+          }
+        </div>
+      }
+      <ul class="consumo-list">
+        @for (c of consumptions(); track c.id) {
+          <li><span>{{ c.name }}</span><span>x{{ c.qty }}</span><span>${{ c.total }}</span></li>
+        }
+      </ul>
+      <div class="totals">
+        <div>Tiempo <b>${{ timeCost() }}</b></div>
+        <div>Consumos <b>${{ consumptionTotal() }}</b></div>
+        <div class="grand">Total <b>${{ grandTotal() }}</b></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      @if (gameMode() !== 'FreeMode') {
+        <button
+          class="btn btn-outline"
+          [class.sent]="requestSent() === 'waiter'"
+          (click)="callWaiter()">
+          {{ requestSent() === 'waiter' ? '✓ Llamado' : 'Llamar Mesero' }}
+        </button>
+        <button
+          class="btn btn-outline"
+          [class.sent]="requestSent() === 'check'"
+          (click)="requestCheck()">
+          {{ requestSent() === 'check' ? '✓ Solicitado' : 'Pedir Cuenta' }}
+        </button>
+      }
+      <button class="btn btn-danger long" (click)="onRequestClose()">Terminar Partida</button>
+    </div>
+  }
+</section>
+
+<app-slide-confirm
+  [open]="showConfirm()"
+  title="Confirmar cierre de partida"
+  message="Arrastra el control para finalizar. En modo libre se exige confirmación por seguridad."
+  (confirmed)="finishConfirmed()"
+  (cancelled)="onConfirmCancelled()" />

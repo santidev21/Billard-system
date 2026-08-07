@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BilliardSystem.API.Endpoints;
 using BilliardSystem.API.Hubs;
 using BilliardSystem.Infrastructure;
@@ -7,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddCors(options =>
 {

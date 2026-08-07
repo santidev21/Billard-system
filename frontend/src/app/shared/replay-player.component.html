@@ -1,0 +1,19 @@
+@if (open && src) {
+  <div class="overlay">
+    <div class="card">
+      <header>
+        <h3>Repetición instantánea</h3>
+        <button class="btn btn-outline close" (click)="close()">✕</button>
+      </header>
+      <video #videoEl controls autoplay muted></video>
+      <div class="controls">
+        <button class="btn btn-outline" (click)="playPause()">Play/Pause</button>
+        <button class="btn btn-outline" (click)="setRate(0.25)">0.25x</button>
+        <button class="btn btn-outline" (click)="setRate(0.5)">0.5x</button>
+        <button class="btn btn-outline" (click)="setRate(1)">1x</button>
+        <button class="btn btn-outline" (click)="stepFrames(-1)">« Frame</button>
+        <button class="btn btn-outline" (click)="stepFrames(1)">Frame »</button>
+      </div>
+    </div>
+  </div>
+}

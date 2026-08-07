@@ -1,0 +1,16 @@
+<section>
+  <h2 class="page-title">Registro de Auditoría</h2>
+  <div class="glass list">
+    @for (log of logs(); track log.id) {
+      <div class="entry">
+        <div class="head">
+          <span class="pill">{{ log.actionType }}</span>
+          <time [attr.datetime]="log.createdAt">{{ time(log.createdAt) }}</time>
+        </div>
+        <p>{{ log.description }}</p>
+      </div>
+    } @empty {
+      <p class="empty">Sin registros</p>
+    }
+  </div>
+</section>

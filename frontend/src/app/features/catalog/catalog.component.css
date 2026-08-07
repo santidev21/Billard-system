@@ -1,0 +1,16 @@
+.page-title { margin: 0 0 1rem; }
+.form { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 1rem; margin-bottom: 1.25rem; }
+.form select, .form input {
+  flex: 1;
+  min-width: 160px;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+.cat { padding: 1rem; }
+.cat h3 { margin: 0 0 0.6rem; }
+.cat ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.cat li { display: flex; justify-content: space-between; padding: 0.5rem 0.7rem; background: rgba(255,255,255,0.04); border-radius: 10px; }

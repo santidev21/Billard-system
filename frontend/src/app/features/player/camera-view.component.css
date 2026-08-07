@@ -1,0 +1,23 @@
+.cam { padding: 0.75rem; }
+.feed-wrap { position: relative; border-radius: 12px; overflow: hidden; }
+.live { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; display: block; border-radius: 12px; }
+.live-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-muted);
+}
+.live-indicator .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748B; }
+.live-indicator.on .dot { background: #F87171; animation: blink 1.2s infinite; }
+.live-indicator.on { color: #FCA5A5; }
+@keyframes blink { 50% { opacity: 0.2; } }
+.controls { display: flex; justify-content: flex-end; margin-top: 0.6rem; }

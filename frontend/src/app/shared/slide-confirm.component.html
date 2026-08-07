@@ -1,0 +1,23 @@
+@if (open) {
+  <div class="overlay" (click)="close()">
+    <div class="card" (click)="$event.stopPropagation()">
+      <h3>{{ title }}</h3>
+      <p>{{ message }}</p>
+
+      <div class="slider" (pointerdown)="onPointerDown($event)">
+        <div class="slider-fill" [style.width.%]="(dragX / threshold) * 100"></div>
+        <div class="slider-hint">{{ completed ? 'Cerrado ✓' : 'Desliza para confirmar' }}</div>
+        <div
+          class="slider-thumb"
+          [class.completed]="completed"
+          [style.transform]="'translateX(' + dragX + 'px)'">
+          {{ completed ? '✓' : '»' }}
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-outline" (click)="close()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+}

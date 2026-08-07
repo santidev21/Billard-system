@@ -1,0 +1,63 @@
+:root {
+  --pa-read-color: #10b981;
+  --pa-color: #0F5132;
+  --pa-dark: #0B3D26;
+  --white-ball: #FFFFFF;
+  --yellow-ball: #FACC15;
+  --slate: #1E293B;
+  --slate-light: #2a3a55;
+  --text-primary: #F1F5F9;
+  --text-muted: #94A3B8;
+  --danger: #EF4444;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+  background: var(--slate);
+  color: var(--text-primary);
+  height: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(30, 41, 59, 0.65);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.4rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: transform 0.1s ease, filter 0.2s ease;
+  color: var(--text-primary);
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: var(--pa-color); color: #fff; }
+.btn-outline { background: transparent; border: 2px solid var(--pa-color); color: var(--pa-color); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }

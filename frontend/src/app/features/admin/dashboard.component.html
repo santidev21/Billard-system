@@ -1,0 +1,48 @@
+<section>
+  <h2 class="page-title">Dashboard de Mesas</h2>
+
+  <div class="notif-panel">
+    @for (n of notifications(); track n.id) {
+      <div class="notif" [class.check]="n.type === 'check'">{{ n.text }}</div>
+    }
+  </div>
+
+  @if (summary(); as s) {
+    <div class="kpis">
+      <div class="kpi"><span class="val">{{ s.totalTables }}</span><span class="lbl">Mesas</span></div>
+      <div class="kpi free"><span class="val">{{ s.availableTables }}</span><span class="lbl">Libres</span></div>
+      <div class="kpi occupied"><span class="val">{{ s.occupiedTables }}</span><span class="lbl">Ocupadas</span></div>
+      <div class="kpi sales"><span class="val">${{ s.salesToday }}</span><span class="lbl">Ventas hoy</span></div>
+    </div>
+  }
+
+  <div class="grid">
+    @for (table of tables(); track table.id) {
+      <a class="table-card" [routerLink]="['/tables', table.id]">
+        <div class="card-top">
+          <span class="dot-c" [class]="statusDot(table.status)"></span>
+          <span class="name">{{ table.name }}</span>
+          <span class="status">{{ table.status }}</span>
+        </div>
+        @if (details()[table.id]?.activeMatch; as match) {
+          <div class="match">
+            <div><span class="bw"></span> {{ match.whitePlayerName }}: {{ match.whiteScore }}</div>
+            <div><span class="by"></span> {{ match.yellowPlayerName }}: {{ match.yellowScore }}</div>
+            <div class="total">Consumos: ${{ match.consumptionTotal }}</div>
+          </div>
+        } @else {
+          <div class="empty">Mesa disponible</div>
+        }
+      </a>
+    }
+  </div>
+
+  @if (topProducts().length) {
+    <h3 class="sub-title">Productos más vendidos (7 días)</h3>
+    <div class="top">
+      @for (p of topProducts(); track p.name) {
+        <div class="top-row"><span>{{ p.name }}</span><span>{{ p.quantity }}</span><span>${{ p.total }}</span></div>
+      }
+    </div>
+  }
+</section>

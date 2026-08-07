@@ -20,4 +20,12 @@ public sealed class Product : Entity
     public string Name { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
     public bool IsActive { get; private set; } = true;
+
+    public void Update(string name, decimal price)
+    {
+        Name = name;
+        Price = price;
+    }
+
+    public void Deactivate() => IsActive = false;
 }

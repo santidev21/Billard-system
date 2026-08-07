@@ -1,0 +1,28 @@
+<section>
+  <h2 class="page-title">Historial de Partidas</h2>
+
+  <div class="table-wrap glass">
+    <table>
+      <thead>
+        <tr>
+          <th>Blanco</th><th>Amarillo</th><th>Marcador</th><th>Carambolas</th><th>Modo</th><th>Duración</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of matches(); track m.id) {
+          <tr>
+            <td>{{ m.whitePlayerName }}</td>
+            <td>{{ m.yellowPlayerName }}</td>
+            <td>{{ m.whiteScore }} : {{ m.yellowScore }}</td>
+            <td>{{ m.totalCarambolas }}</td>
+            <td>{{ m.gameMode }}</td>
+            <td>{{ duration(m) }}</td>
+            <td>${{ m.grandTotal }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">Sin partidas registradas</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
