@@ -2,27 +2,24 @@
   <h2 class="page-title">Catálogo de Productos</h2>
 
   <div class="form glass">
-    <select [(ngModel)]="selectedCategoryId">
-      <option value="" disabled>Selecciona categoría</option>
-      @for (c of categories(); track c.id) {
-        <option [value]="c.id">{{ c.name }}</option>
-      }
-    </select>
     <input [(ngModel)]="newProductName" placeholder="Nombre del producto" />
     <input [(ngModel)]="newProductPrice" type="number" placeholder="Precio" />
-    <button class="btn btn-primary" (click)="addProduct()" [disabled]="!selectedCategoryId || !newProductName.trim()">Agregar</button>
+    <button class="btn btn-primary" (click)="addProduct()" [disabled]="!newProductName.trim() || newProductPrice <= 0">Agregar</button>
   </div>
 
   <div class="cats">
-    @for (c of categories(); track c.id) {
-      <div class="cat glass">
-        <h3>{{ c.name }}</h3>
-        <ul>
-          @for (p of c.products; track p.id) {
-            <li><span>{{ p.name }}</span><b>${{ p.price }}</b></li>
-          }
-        </ul>
-      </div>
-    }
+    <div class="cat glass">
+      <ul>
+        @for (p of products(); track p.id) {
+          <li>
+            <span>{{ p.name }}</span>
+            <b>${{ fmtMoney(p.price) }}</b>
+            <button class="btn btn-outline mini-remove" (click)="removeProduct(p.id)">Eliminar</button>
+          </li>
+        } @empty {
+          <li class="empty">Sin productos registrados</li>
+        }
+      </ul>
+    </div>
   </div>
 </section>

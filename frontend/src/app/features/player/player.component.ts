@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
@@ -30,11 +30,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   readonly gameMode = signal<GameMode>((localStorage.getItem('tableMode') as GameMode) ?? 'Managed');
+  readonly blockedMsg = signal<string | null>(null);
+  readonly showEnded = signal(false);
+  readonly endedSummary = signal<{ time: string; consumptionTotal: number; grandTotal: number } | null>(null);
   readonly whiteName = signal('Jugador 1');
   readonly yellowName = signal('Jugador 2');
   readonly whiteScore = signal(0);
   readonly yellowScore = signal(0);
-  readonly elapsedSeconds = signal(0);
+  readonly startedAt = signal<number | null>(null);
+  readonly now = signal(Date.now());
   readonly consumptionTotal = signal(0);
   readonly consumptions = signal<UiConsumption[]>([]);
   readonly tableId = signal('');
@@ -44,6 +48,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly showConsumptionLog = signal(false);
   readonly roundNumber = signal(0);
   readonly lastRound = signal<string | null>(null);
+  readonly showRounds = signal(false);
+  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] } | null>(null);
   readonly requestSent = signal<'waiter' | 'check' | null>(null);
   readonly products = signal<{ id: string; name: string; price: number }[]>([]);
 
@@ -52,19 +58,23 @@ export class PlayerComponent implements OnInit, OnDestroy {
     const match = this.tableName().match(/\d+/);
     return match ? match[0] : this.tableName();
   });
+  readonly elapsedSeconds = computed(() => {
+    const start = this.startedAt();
+    return start ? Math.max(0, Math.floor((this.now() - start) / 1000)) : 0;
+  });
   readonly elapsed = computed(() => {
     const s = this.elapsedSeconds();
-    const h = String(Math.floor(s / 3600));
+    const h = String(Math.floor(s / 3600)).padStart(2, '0');
     const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-    const sec = String(s % 60).padStart(2, '0');
-    return `${h}:${m}:${sec}`;
+    return `${h}:${m}`;
   });
+  readonly elapsedMinutes = computed(() => Math.floor(this.elapsedSeconds() / 60));
 
   readonly hourlyRate = signal(String(localStorage.getItem('defaultRate') ?? '12000'));
 
   readonly timeCost = computed(() => {
     const rate = Number(this.hourlyRate());
-    return (this.elapsedSeconds() / 3600) * rate;
+    return Math.floor((this.elapsedMinutes() / 60) * rate);
   });
   readonly grandTotal = computed(() => this.timeCost() + this.consumptionTotal());
   readonly timeCostText = computed(() => this.fmtMoney(this.timeCost()));
@@ -72,7 +82,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly grandTotalText = computed(() => this.fmtMoney(this.grandTotal()));
 
   private fmtMoney(value: number): string {
-    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
   readonly fmt = (value: number): string => this.fmtMoney(value);
@@ -104,6 +114,71 @@ export class PlayerComponent implements OnInit, OnDestroy {
       }
     });
     await this.loadProducts();
+
+    effect(() => {
+      this.signalr.tableStateUpdated();
+      if (this.tableId()) {
+        void this.refreshFromServer();
+      }
+    });
+    effect(() => {
+      const c = this.signalr.consumptionAdded();
+      if (c && c.tableId === this.tableId()) {
+        this.consumptionTotal.set(c.consumptionTotal);
+      }
+    });
+    effect(() => {
+      const p = this.signalr.playerScored();
+      if (p && p.tableId === this.tableId()) {
+        if (p.playerColor === 'white') {
+          this.whiteScore.set(p.newScore);
+        } else {
+          this.yellowScore.set(p.newScore);
+        }
+      }
+    });
+    effect(() => {
+      const n = this.signalr.playerNamesChanged();
+      if (n && n.tableId === this.tableId()) {
+        this.whiteName.set(n.whitePlayerName);
+        this.yellowName.set(n.yellowPlayerName);
+      }
+    });
+    effect(() => {
+      const e = this.signalr.sessionEnded();
+      if (e && e.tableId === this.tableId()) {
+        this.endedSummary.set({
+          time: this.elapsed(),
+          consumptionTotal: e.consumptionTotal ?? 0,
+          grandTotal: e.grandTotal ?? 0,
+        });
+        this.showEnded.set(true);
+      }
+    });
+  }
+
+  closeEnded(): void {
+    this.showEnded.set(false);
+    this.endedSummary.set(null);
+  }
+
+  private async refreshFromServer(): Promise<void> {
+    if (!this.tableId()) {
+      return;
+    }
+    try {
+      const detail = await this.api.getTable(this.tableId());
+      if (detail.activeMatch) {
+        this.applyDetail(detail);
+      } else {
+        this.running.set(false);
+        this.whiteScore.set(0);
+        this.yellowScore.set(0);
+        this.startedAt.set(null);
+      }
+    } catch {
+      // offline
+    }
   }
 
   private async autoSelectTable(): Promise<void> {
@@ -123,8 +198,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private async loadProducts(): Promise<void> {
     try {
-      const cats = await this.api.getProducts();
-      this.products.set(cats.flatMap((c) => c.products.map((p) => ({ id: p.id, name: p.name, price: p.price }))));
+      this.products.set(await this.api.getProducts());
     } catch {
       // offline
     }
@@ -140,7 +214,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     try {
       const detail = await this.api.getTable(id);
       this.tableName.set(detail.name);
+      this.hourlyRate.set(String(detail.hourlyRate));
       localStorage.setItem('tableName', detail.name);
+      localStorage.setItem('defaultRate', String(detail.hourlyRate));
       this.applyDetail(detail);
     } catch {
       // offline: rely on cached defaults
@@ -152,7 +228,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.running.set(false);
       this.whiteScore.set(0);
       this.yellowScore.set(0);
-      this.elapsedSeconds.set(0);
+      this.startedAt.set(null);
       return;
     }
     const m = detail.activeMatch;
@@ -161,6 +237,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.yellowName.set(m.yellowPlayerName);
     this.whiteScore.set(m.whiteScore);
     this.yellowScore.set(m.yellowScore);
+    this.startedAt.set(new Date(m.startedAt).getTime());
     this.consumptionTotal.set(m.consumptionTotal);
     this.consumptions.set(m.consumptions.map((c) => ({ id: c.id, name: c.productName, qty: c.quantity, total: c.total, at: c.createdAt })));
     this.roundNumber.set(m.roundNumber);
@@ -171,7 +248,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if (this.tickTimer) {
       clearInterval(this.tickTimer);
     }
-    this.tickTimer = setInterval(() => this.elapsedSeconds.update((v) => v + 1), 1000);
+    this.now.set(Date.now());
+    this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
   }
 
   private genTx(): string {
@@ -179,6 +257,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   selectMode(mode: GameMode): void {
+    if (this.running()) {
+      this.blockedMsg.set('Primero pide al mesero que cierre tu cuenta.');
+      setTimeout(() => this.blockedMsg.set(null), 3500);
+      return;
+    }
     this.gameMode.set(mode);
     localStorage.setItem('tableMode', mode);
   }
@@ -226,6 +309,21 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.yellowScore.set(0);
   }
 
+  async showRoundHistory(): Promise<void> {
+    try {
+      const data = await this.api.getRounds(this.tableId());
+      this.rounds.set(data);
+      this.showRounds.set(true);
+    } catch {
+      // offline
+    }
+  }
+
+  closeRounds(): void {
+    this.showRounds.set(false);
+    this.rounds.set(null);
+  }
+
   formatAt(value: string | undefined): string {
     if (!value) {
       return '';
@@ -260,7 +358,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.saveNames();
     this.whiteScore.set(0);
     this.yellowScore.set(0);
-    this.elapsedSeconds.set(0);
+    this.startedAt.set(Date.now());
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
     this.running.set(true);
@@ -334,6 +432,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     } else {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', tableId: this.tableId(), payload: {} });
     }
+    this.endedSummary.set({
+      time: this.elapsed(),
+      consumptionTotal: this.consumptionTotal(),
+      grandTotal: this.grandTotal(),
+    });
+    this.showEnded.set(true);
     this.resetUi();
   }
 
@@ -341,7 +445,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.running.set(false);
     this.whiteScore.set(0);
     this.yellowScore.set(0);
-    this.elapsedSeconds.set(0);
+    this.startedAt.set(null);
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
     this.roundNumber.set(0);

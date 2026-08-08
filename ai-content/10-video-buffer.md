@@ -43,3 +43,9 @@ Para garantizar la repetición instantánea sin interrumpir la grabación de la 
 - Buffer de 3 minutos: ~27 MB en RAM.
 - Buffer de 5 minutos: ~45 MB en RAM.
 - Consumo óptimo y seguro para PCs locales de baja o mediana gama.
+
+## Optimización 2026-08-07 (equipos viejos)
+- La cámara se solicita ahora con restricciones amigables a memoria: `width/height ideal 1280x720`, `frameRate ideal 24`, `audio:false` y `videoBitsPerSecond` de 1.5 Mbps en el `MediaRecorder`.
+- El buffer por defecto bajó de 60s a **30s** (configurable por `localStorage.replayBufferSeconds`; si el valor no es numérico se usa 30 por seguridad).
+- **Fix crítico de reproducción**: el ring buffer conservaba y desplazaba chunks con `chunks.shift()`, lo que eliminaba el primer chunk (segmento de inicialización WebM) y el blob resultante no se decodificaba (pantalla gris). Ahora se conserva siempre el chunk 0 y se desplazan solo los demás con `splice(1, length - maxChunks)`.
+- El promedio de `captureFrame()` dispara `recorder.requestData()` y espera ~150 ms antes de ensamblar el blob para que el WebM incluya segmento de inicio válido.

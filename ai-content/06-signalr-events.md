@@ -48,3 +48,18 @@ Hub Endpoint: `/hubs/tables`
   - `LeaveTableGroup(Guid tableId)`: saca la conexion del grupo `table:{tableId}`.
 - Aun faltan handlers que emitan los eventos de servidor listados arriba.
 - El formato de grupo implementado es `table:{tableId}`; el formato `Table_{tableId}` queda como objetivo anterior a reconciliar.
+
+## Estado Implementado Actual - 2026-08-07 (Real-time entre Player y Admin)
+- Se emitieron broadcasts reales desde los endpoints REST hacia SignalR para que la pantalla de jugador y la de admin se actualicen en vivo sin recargar:
+  - **`start`**: `TableStateUpdated` a `Clients.All` (status `Occupied`) y `SessionStarted` al grupo `table:{id}`.
+  - **`score`**: `PlayerScored` al grupo `table:{id}` y ademas `TableStateUpdated` a `Clients.All`.
+  - **`players`**: `PlayerNamesChanged` al grupo y `TableStateUpdated` a `Clients.All`.
+  - **`consumption`**: `ConsumptionAdded` al grupo (con `consumptionTotal`) y `TableStateUpdated` a `Clients.All`.
+  - **`call-waiter`**: `AdminNotification` a `Clients.All`.
+  - **`request-check`**: `AdminRequest` a `Clients.All`.
+  - **`finish`**: `SessionEnded` al grupo y `TableStateUpdated` (status `Available`) a `Clients.All`.
+  - **`finish-round`**: `TableStateUpdated` (grupo + All) y `PlayerScored` de reset.
+  - **`PUT /tables/rate/all`**: `TableStateUpdated` con `tableId=null, status="RateChanged"` a `Clients.All`.
+- **Contrato cliente**: `TableStateUpdated` es la fuente de verdad autoritativa: tanto `DashboardComponent` (admin) como `PlayerComponent` reaccionan y re-consultan el detalle de la mesa afectada, sincronizando puntuacion, consumos, nombres, tarifas y cierre sin recargar.
+- `PlayerComponent` tambien suscribe `PlayerScored`, `ConsumptionAdded` y `PlayerNamesChanged` para aplicar cambios granulares inmediatos cuando el evento corresponde a su `tableId`.
+- El dashboard de admin hace *debounce* (350 ms) del refresco ante rafagas de `TableStateUpdated` y carga los detalles de todas las mesas en paralelo (`Promise.all`) para no saturar maquinas viejas.

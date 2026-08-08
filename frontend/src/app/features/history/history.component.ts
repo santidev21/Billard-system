@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 
 import { ApiService } from '../../core/api.service';
 import { MatchListItem } from '../../core/models';
+import { fmtMoney } from '../../core/format';
 
 @Component({
   selector: 'app-history',
@@ -11,6 +12,8 @@ import { MatchListItem } from '../../core/models';
 })
 export class HistoryComponent implements OnInit {
   private readonly api = inject(ApiService);
+
+  readonly fmtMoney = fmtMoney;
   readonly matches = signal<MatchListItem[]>([]);
 
   async ngOnInit(): Promise<void> {
@@ -29,8 +32,7 @@ export class HistoryComponent implements OnInit {
 
 function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
-  const h = String(Math.floor(s / 3600));
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
   const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-  const sec = String(s % 60).padStart(2, '0');
-  return `${h}:${m}:${sec}`;
+  return `${h}:${m}`;
 }

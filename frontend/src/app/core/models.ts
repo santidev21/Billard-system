@@ -48,17 +48,13 @@ export interface Product {
   price: number;
 }
 
-export interface ProductCategory {
-  id: string;
-  name: string;
-  products: Product[];
-}
-
 export interface DashboardSummary {
   totalTables: number;
   availableTables: number;
   occupiedTables: number;
   salesToday: number;
+  salesByGame: number;
+  salesByConsumption: number;
 }
 
 export interface TopProduct {

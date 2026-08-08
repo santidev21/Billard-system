@@ -1,4 +1,11 @@
-.player-shell { display: flex; flex-direction: column; gap: 0.75rem; height: 100%; }
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.player-shell { display: flex; flex-direction: column; gap: 0.75rem; height: 100%; flex: 1; min-height: 0; }
 
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .panel-head h2 { margin: 0; font-size: 1.5rem; }
@@ -81,7 +88,7 @@
 .score-btn {
   width: 100%;
   max-width: 170px;
-  padding: 0.4rem;
+  padding: 0.9rem 0.4rem;
   border-radius: 14px;
   font-size: 4.2rem;
   font-weight: 900;
@@ -190,6 +197,16 @@
   z-index: 50;
   box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
+.round-toast.blocked { background: var(--danger); }
+
+.mode-switch button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ended-summary { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.25rem 0 0.75rem; }
+.es-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(0,0,0,0.28); border-radius: 10px; }
+.es-row span { color: var(--text-muted); }
+.es-row b { font-size: 1.15rem; }
+.es-row.grand b { color: var(--pa-color); font-size: 1.6rem; }
+.waiting-msg { color: var(--text-muted); font-size: 1.05rem; text-align: center; }
 
 .overlay {
   position: fixed;
@@ -216,6 +233,18 @@
 .consumption-log td:last-child { color: var(--text-primary); font-weight: 700; }
 .confirm .msg { color: var(--text-muted); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
+
+.rounds-overlay .card { width: min(560px, 94vw); }
+.rounds-score { display: flex; gap: 0.75rem; margin-bottom: 0.9rem; }
+.rk { flex: 1; background: rgba(0,0,0,0.28); border-radius: 12px; padding: 0.8rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+.rk .rk-lbl { color: var(--text-muted); font-size: 0.8rem; }
+.rk .rk-val { font-weight: 900; font-size: 1.5rem; }
+.rk.bw .rk-val { color: #e2e8f0; }
+.rk.by .rk-val { color: var(--yellow-ball); }
+.rounds-overlay table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.rounds-overlay th, .rounds-overlay td { padding: 0.5rem 0.6rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.rounds-overlay th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+.rk-leader { margin-top: 0.9rem; font-weight: 700; color: var(--pa-color); }
 
 .brand {
   text-align: center;

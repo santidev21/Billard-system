@@ -20,8 +20,8 @@ export class CameraViewComponent implements OnInit, AfterViewInit, OnDestroy {
   private attached = false;
 
   async ngOnInit(): Promise<void> {
-    const saved = localStorage.getItem('replayBufferSeconds') ?? '60';
-    this.buffer.configure(Number(saved));
+    const saved = localStorage.getItem('replayBufferSeconds');
+    this.buffer.configure(saved ? Number(saved) : 30);
     await this.buffer.start(this.deviceId || undefined);
   }
 

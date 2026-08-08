@@ -9,8 +9,11 @@
   color: var(--text-primary);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+.cats { display: grid; grid-template-columns: 1fr; gap: 0.75rem; max-width: 640px; }
 .cat { padding: 1rem; }
 .cat h3 { margin: 0 0 0.6rem; }
 .cat ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-.cat li { display: flex; justify-content: space-between; padding: 0.5rem 0.7rem; background: rgba(255,255,255,0.04); border-radius: 10px; }
+.cat li { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; background: rgba(255,255,255,0.04); border-radius: 10px; }
+.cat li span { flex: 1; }
+.cat li b { color: var(--pa-color); }
+.mini-remove { padding: 0.35rem 0.6rem; border-radius: 8px; background: rgba(248,113,113,0.15); color: #FCA5A5; font-size: 0.8rem; }

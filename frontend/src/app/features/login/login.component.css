@@ -1,0 +1,20 @@
+.login-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(380px, 100%);
+  padding: 2rem;
+}
+.login-card h2 { margin: 0 0 0.25rem; text-align: center; }
+.hint { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 0.75rem; text-align: center; }
+.login-card label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
+.login-card input {
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+.error { color: var(--danger); font-size: 0.9rem; font-weight: 600; text-align: center; }

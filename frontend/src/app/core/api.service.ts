@@ -6,7 +6,7 @@ import {
   AuditLog,
   DashboardSummary,
   MatchListItem,
-  ProductCategory,
+  Product,
   Settings,
   TableDetail,
   TableResponse,
@@ -18,9 +18,28 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api';
 
+  // Auth
+  login(password: string): Promise<{ token: string }> {
+    return lastValueFrom(this.http.post<{ token: string }>(`${this.base}/auth/login`, { password }));
+  }
+  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return lastValueFrom(
+      this.http.post<void>(`${this.base}/auth/change-password`, { currentPassword, newPassword })
+    );
+  }
+
   // Tables
   getTables(): Promise<TableResponse[]> {
     return lastValueFrom(this.http.get<TableResponse[]>(`${this.base}/tables`));
+  }
+  createTable(name: string, hourlyRate: number): Promise<TableResponse> {
+    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables`, { name, hourlyRate }));
+  }
+  updateTable(id: string, name: string, hourlyRate: number): Promise<TableResponse> {
+    return lastValueFrom(this.http.put<TableResponse>(`${this.base}/tables/${id}`, { name, hourlyRate }));
+  }
+  updateAllRates(hourlyRate: number): Promise<{ updated: number }> {
+    return lastValueFrom(this.http.put<{ updated: number }>(`${this.base}/tables/rate/all`, { hourlyRate }));
   }
   getTable(id: string): Promise<TableDetail> {
     return lastValueFrom(this.http.get<TableDetail>(`${this.base}/tables/${id}`));
@@ -70,13 +89,16 @@ export class ApiService {
       this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/tables/${id}/finish-round`, { transactionId })
     );
   }
+  getRounds(id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] }> {
+    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] }>(`${this.base}/tables/${id}/rounds`));
+  }
 
   // Catalog
-  getProducts(): Promise<ProductCategory[]> {
-    return lastValueFrom(this.http.get<ProductCategory[]>(`${this.base}/products`));
+  getProducts(): Promise<Product[]> {
+    return lastValueFrom(this.http.get<Product[]>(`${this.base}/products`));
   }
-  createProduct(categoryId: string, name: string, price: number): Promise<void> {
-    return lastValueFrom(this.http.post<void>(`${this.base}/products`, { categoryId, name, price }));
+  createProduct(name: string, price: number): Promise<Product> {
+    return lastValueFrom(this.http.post<Product>(`${this.base}/products`, { name, price }));
   }
   updateProduct(id: string, name: string, price: number): Promise<void> {
     return lastValueFrom(this.http.put<void>(`${this.base}/products/${id}`, { name, price }));

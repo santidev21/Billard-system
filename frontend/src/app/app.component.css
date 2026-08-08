@@ -20,6 +20,7 @@
 }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--white-ball); display: inline-block; }
 .dot.yellow { background: var(--yellow-ball); }
+.muted { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
 .nav { display: flex; gap: 0.25rem; flex: 1; }
 .nav a {
   color: var(--text-muted);
@@ -45,7 +46,17 @@
 .pill.ok { background: rgba(16, 185, 129, 0.15); color: #34D399; }
 .pill.off { background: rgba(239, 68, 68, 0.15); color: #F87171; }
 .pill.queue { background: rgba(250, 204, 21, 0.15); color: var(--yellow-ball); }
-.shell { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+.shell {
+  max-width: 2000px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
 @media (max-width: 720px) {
   .topbar { flex-wrap: wrap; gap: 0.5rem; }

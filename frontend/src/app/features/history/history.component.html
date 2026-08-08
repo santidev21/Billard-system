@@ -17,7 +17,7 @@
             <td>{{ m.totalCarambolas }}</td>
             <td>{{ m.gameMode }}</td>
             <td>{{ duration(m) }}</td>
-            <td>${{ m.grandTotal }}</td>
+            <td>${{ fmtMoney(m.grandTotal) }}</td>
           </tr>
         } @empty {
           <tr><td colspan="7" class="empty">Sin partidas registradas</td></tr>

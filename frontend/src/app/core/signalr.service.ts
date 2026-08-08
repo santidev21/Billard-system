@@ -20,6 +20,8 @@ export interface ConsumptionAddedEvent {
 export interface SessionEndedEvent {
   tableId: string;
   matchHistoryId: string;
+  tableTotal?: number;
+  consumptionTotal?: number;
   grandTotal: number;
   winnerName: string;
 }

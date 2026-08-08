@@ -195,13 +195,11 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
     private static void Seed(ModelBuilder modelBuilder)
     {
         var table1 = Guid.Parse("10000000-0000-0000-0000-000000000001");
-        var table2 = Guid.Parse("10000000-0000-0000-0000-000000000002");
         var drinks = Guid.Parse("20000000-0000-0000-0000-000000000001");
         var water = Guid.Parse("30000000-0000-0000-0000-000000000001");
 
         modelBuilder.Entity<BilliardTable>().HasData(
-            new { Id = table1, Name = "Mesa 1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, ActiveMatchId = (Guid?)null },
-            new { Id = table2, Name = "Mesa 2", Status = BilliardTableStatus.Available, HourlyRate = 12000m, ActiveMatchId = (Guid?)null });
+            new { Id = table1, Name = "Mesa 1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, ActiveMatchId = (Guid?)null });
 
         modelBuilder.Entity<ProductCategory>().HasData(
             new { Id = drinks, Name = "Bebidas", SortOrder = 1, IsActive = true });
@@ -211,6 +209,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 
         modelBuilder.Entity<AppSetting>().HasData(
             new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Key = "ReplayBufferSeconds", Value = "60", UpdatedAt = DateTimeOffset.UnixEpoch },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", UpdatedAt = DateTimeOffset.UnixEpoch });
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", UpdatedAt = DateTimeOffset.UnixEpoch },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000003"), Key = "AdminPassword", Value = "8C6976E5B5410415BDE908BD4DEE15DFB167A9C873FC4BB8A81F6F2AB448A918", UpdatedAt = DateTimeOffset.UnixEpoch },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000004"), Key = "HourlyRate", Value = "12000", UpdatedAt = DateTimeOffset.UnixEpoch });
     }
 }

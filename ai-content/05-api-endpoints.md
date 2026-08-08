@@ -49,4 +49,15 @@ La API inicial usa prefijo `/api` sin versionado todavia:
 - `GET /api/settings`
 - `GET /api/dashboard/summary`
 
-Pendiente: decidir si se migra ahora a `/api/v1` o si se mantiene `/api` hasta completar los comandos de partida.
+## Estado Implementado Actual - 2026-08-07
+- `POST /api/auth/login`: login admin. Primer login sin clave configurada crea `AdminPassword` (SHA256 hex en `Settings`); si ya existe, valida contra el hash. Retorna `{ token }` (token simple, sin JWT real por ahora). Body: `{ password }` (solo clave, sin usuario).
+- `POST /api/auth/change-password`: actualiza la clave de acceso. Body: `{ currentPassword, newPassword }` (nueva clave min. 4 caracteres). Valida la clave actual y retorna `{ ok: true }`.
+- `POST /api/tables`: crea mesa (`CreateTableRequest: name, hourlyRate`).
+- `PUT /api/tables/{id}`: renombra y/o actualiza tarifa (`UpdateTableRequest: name?, hourlyRate`).
+- `PUT /api/tables/rate/all`: **nuevo** — aplica la misma tarifa por hora a TODAS las mesas (`UpdateAllRatesRequest: hourlyRate`). Emite `TableStateUpdated` a `Clients.All`.
+- `POST /api/tables/{id}/start|score|players|consumption|call-waiter|request-check|finish`: comandos de partida con idempotencia por `TransactionId` (via auditoria) y broadcasts SignalR (ver `06-signalr-events.md`).
+- `POST /api/tables/{id}/finish-round`: cierra la ronda actual (`MatchRound`), incrementa `RoundNumber`, resetea el marcador a 0/0 y emite broadcast. Retorna `RoundResponse(Id, RoundNumber, WhiteScore, YellowScore, WinnerName)`.
+- `GET /api/tables/{id}/rounds`: **nuevo** — historial de rondas de la partida activa. Retorna `RoundHistoryResponse(WhiteRounds, YellowRounds, CurrentRoundNumber, Rounds[])` con cada ronda `RoundDetailResponse(RoundNumber, WhiteScore, YellowScore, WinnerName, EndedAt)`.
+- `GET /api/matches`, `GET /api/matches/{id}`, `GET /api/dashboard/summary`, `GET /api/dashboard/top-products`, `GET /api/audit/logs`, `GET/PUT /api/settings`, CRUD `/api/products`.
+- `GET /api/dashboard/summary` ahora incluye `SalesByGame` y `SalesByConsumption` (desglose de ventas del dia).
+- El seed crea 1 sola mesa: "Mesa 1" (`10000000-0000-0000-0000-000000000001`, tarifa 12000).

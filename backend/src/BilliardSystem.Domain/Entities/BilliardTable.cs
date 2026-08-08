@@ -21,6 +21,10 @@ public sealed class BilliardTable : Entity
     public decimal HourlyRate { get; private set; }
     public Guid? ActiveMatchId { get; private set; }
 
+    public void SetHourlyRate(decimal hourlyRate) => HourlyRate = hourlyRate;
+
+    public void Rename(string name) => Name = name;
+
     public void StartSession(Guid matchId, string whitePlayerName, string yellowPlayerName, Guid? employeeId)
     {
         if (Status != BilliardTableStatus.Available)

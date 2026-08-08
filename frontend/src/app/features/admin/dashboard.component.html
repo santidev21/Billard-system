@@ -1,39 +1,86 @@
-<section>
-  <h2 class="page-title">Dashboard de Mesas</h2>
-
+<section class="dash">
   <div class="notif-panel">
     @for (n of notifications(); track n.id) {
       <div class="notif" [class.check]="n.type === 'check'">{{ n.text }}</div>
     }
   </div>
 
+  <div class="dash-top">
+    <h2 class="page-title">Dashboard de Mesas</h2>
+    <button class="btn btn-primary" (click)="showAddTable.set(true)">+ Agregar Mesa</button>
+  </div>
+
+  @if (showAddTable()) {
+    <div class="add-table glass">
+      <input [(ngModel)]="newTableName" placeholder="Nombre (ej. Mesa 2)" />
+      <button class="btn btn-primary" (click)="addTable()">Guardar Mesa</button>
+      <button class="btn btn-outline" (click)="showAddTable.set(false)">Cancelar</button>
+    </div>
+  }
+
+  <div class="rate-card glass">
+    <div class="rate-info">
+      <span class="rate-lbl">Tarifa por hora</span>
+      <span class="rate-val">${{ fmtMoney(newTableRate) }}</span>
+    </div>
+    <button class="btn btn-primary" (click)="showRateCard.set(!showRateCard())">
+      {{ showRateCard() ? 'Cancelar' : 'Cambiar tarifa' }}
+    </button>
+  </div>
+
+  @if (showRateCard()) {
+    <div class="add-table glass">
+      <input [(ngModel)]="newTableRate" type="number" placeholder="Nueva tarifa por hora (todas las mesas)" />
+      <button class="btn btn-primary" (click)="saveAllRates()">Aplicar a todas</button>
+    </div>
+  }
+
   @if (summary(); as s) {
     <div class="kpis">
       <div class="kpi"><span class="val">{{ s.totalTables }}</span><span class="lbl">Mesas</span></div>
       <div class="kpi free"><span class="val">{{ s.availableTables }}</span><span class="lbl">Libres</span></div>
       <div class="kpi occupied"><span class="val">{{ s.occupiedTables }}</span><span class="lbl">Ocupadas</span></div>
-      <div class="kpi sales"><span class="val">${{ s.salesToday }}</span><span class="lbl">Ventas hoy</span></div>
+      <div class="kpi sales"><span class="val">${{ fmtMoney(s.salesToday) }}</span><span class="lbl">Ventas hoy</span></div>
+    </div>
+    <div class="sales-breakdown glass">
+      <div><span>Ingresos por juego</span><b>${{ fmtMoney(s.salesByGame) }}</b></div>
+      <div><span>Ingresos por consumo</span><b>${{ fmtMoney(s.salesByConsumption) }}</b></div>
+      <div class="grand"><span>Total</span><b>${{ fmtMoney(s.salesToday) }}</b></div>
     </div>
   }
 
   <div class="grid">
     @for (table of tables(); track table.id) {
-      <a class="table-card" [routerLink]="['/tables', table.id]">
+      <div class="table-card" (click)="openTable(table.id)">
         <div class="card-top">
           <span class="dot-c" [class]="statusDot(table.status)"></span>
           <span class="name">{{ table.name }}</span>
           <span class="status">{{ table.status }}</span>
         </div>
-        @if (details()[table.id]?.activeMatch; as match) {
-          <div class="match">
-            <div><span class="bw"></span> {{ match.whitePlayerName }}: {{ match.whiteScore }}</div>
-            <div><span class="by"></span> {{ match.yellowPlayerName }}: {{ match.yellowScore }}</div>
-            <div class="total">Consumos: ${{ match.consumptionTotal }}</div>
-          </div>
-        } @else {
-          <div class="empty">Mesa disponible</div>
+        @let detail = details()[table.id];
+        @if (detail) {
+          @if (detail.activeMatch; as match) {
+            <div class="match-info">
+              <div><span class="bw"></span> {{ match.whitePlayerName }}: {{ match.whiteScore }}</div>
+              <div><span class="by"></span> {{ match.yellowPlayerName }}: {{ match.yellowScore }}</div>
+              <div class="line"><span>Tiempo</span><b>{{ cardElapsed(detail) }}</b></div>
+              <div class="line"><span>Consumo</span><b>${{ fmtMoney(match.consumptionTotal) }}</b></div>
+              <div class="line"><span>Tiempo</span><b>${{ fmtMoney(cardTimeCost(detail)) }}</b></div>
+              <div class="total">Total: ${{ fmtMoney(cardTotal(detail)) }}</div>
+              <div class="action-btns">
+                <button class="mini" (click)="$event.stopPropagation(); triggerWaiter(table.id)">Llamar</button>
+                <button class="mini" (click)="$event.stopPropagation(); triggerCheck(table.id)">Cuenta</button>
+                <button class="mini danger" (click)="$event.stopPropagation(); requestFinish(detail)">Cerrar</button>
+              </div>
+            </div>
+          } @else {
+            <div class="empty">
+              <span>Mesa disponible</span>
+              <button class="mini primary" (click)="$event.stopPropagation(); openStartForm(table.id)">Iniciar sesión</button>
+            </div>
+          }
         }
-      </a>
+      </div>
     }
   </div>
 
@@ -41,8 +88,70 @@
     <h3 class="sub-title">Productos más vendidos (7 días)</h3>
     <div class="top">
       @for (p of topProducts(); track p.name) {
-        <div class="top-row"><span>{{ p.name }}</span><span>{{ p.quantity }}</span><span>${{ p.total }}</span></div>
+        <div class="top-row"><span>{{ p.name }}</span><span>{{ p.quantity }}</span><span>${{ fmtMoney(p.total) }}</span></div>
       }
     </div>
+  }
+
+  @if (selectedTable(); as t) {
+    <div class="table-modal overlay" (click)="closeTable()">
+      <div class="modal-card glass" (click)="$event.stopPropagation()">
+        <header>
+          <h3>{{ t.name }}</h3>
+          <button class="btn btn-outline close" (click)="closeTable()">✕</button>
+        </header>
+
+        <app-camera-view />
+
+        @if (t.activeMatch; as m) {
+          <div class="modal-match">
+            <div class="mp"><span class="bw"></span> {{ m.whitePlayerName }} <b>{{ m.whiteScore }}</b></div>
+            <div class="mp"><span class="by"></span> {{ m.yellowPlayerName }} <b>{{ m.yellowScore }}</b></div>
+            <div class="mm">Carambolas: {{ m.whiteScore + m.yellowScore }} · Consumo: ${{ fmtMoney(m.consumptionTotal) }}</div>
+          </div>
+          <button class="btn btn-primary" (click)="requestFinish()">Cerrar mesa</button>
+        } @else {
+          <div class="start-form">
+            <input [(ngModel)]="selectedWhite" placeholder="Jugador blanco" />
+            <input [(ngModel)]="selectedYellow" placeholder="Jugador amarillo" />
+            <button class="btn btn-primary" (click)="confirmStart(t.id)">Iniciar sesión</button>
+          </div>
+        }
+
+        @if (consumptionProducts().length) {
+          <div class="add-consumo">
+            <select [(ngModel)]="toastProductId">
+              <option value="" disabled>Agregar consumo…</option>
+              @for (p of consumptionProducts(); track p.id) {
+                <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
+              }
+            </select>
+            <button class="btn btn-primary" [disabled]="!toastProductId" (click)="addConsumptionToTable(t.id)">Agregar</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (showFinishConfirm() && selectedTable(); as t) {
+    @if (finishSummary(); as fs) {
+      <div class="table-modal overlay" (click)="showFinishConfirm.set(false)">
+        <div class="modal-card glass" (click)="$event.stopPropagation()">
+          <header>
+            <h3>Cerrar {{ t.name }}</h3>
+            <button class="btn btn-outline close" (click)="showFinishConfirm.set(false)">✕</button>
+          </header>
+          <div class="modal-match">
+            <div class="mp">Tiempo <b>{{ fs.elapsed }}</b></div>
+            <div class="mp">Consumo <b>${{ fmtMoney(fs.consumptionTotal) }}</b></div>
+            <div class="mp total">Total <b>${{ fmtMoney(fs.grandTotal) }}</b></div>
+          </div>
+          <div class="action-btns">
+            <button class="btn btn-primary" (click)="finishSession(t.id)">Confirmar y cobrar</button>
+            <button class="btn btn-outline" (click)="showFinishConfirm.set(false)">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    }
   }
 </section>

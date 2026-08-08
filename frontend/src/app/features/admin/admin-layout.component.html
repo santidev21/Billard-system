@@ -1,0 +1,46 @@
+<div class="admin-layout">
+  <div class="admin-head">
+    <h2>Panel de Administración</h2>
+    <div class="admin-head-actions">
+      <button class="btn btn-outline" (click)="openChangePassword()">Cambiar clave</button>
+      <button class="btn btn-outline" (click)="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <nav class="admin-nav">
+    <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+    <a routerLink="/admin/catalog" routerLinkActive="active">Catálogo</a>
+    <a routerLink="/admin/history" routerLinkActive="active">Historial</a>
+    <a routerLink="/admin/audit" routerLinkActive="active">Auditoría</a>
+  </nav>
+
+  <div class="admin-body">
+    <router-outlet />
+  </div>
+</div>
+
+@if (showChangePassword()) {
+  <div class="overlay">
+    <div class="card glass">
+      <header>
+        <h3>Actualizar clave de acceso</h3>
+        <button class="btn btn-outline close" (click)="closeChangePassword()">✕</button>
+      </header>
+      <label>Clave actual</label>
+      <input [(ngModel)]="currentPassword" type="password" placeholder="Clave actual" autocomplete="current-password" />
+      <label>Nueva clave</label>
+      <input [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 4 caracteres)" autocomplete="new-password" />
+      <label>Confirmar nueva clave</label>
+      <input [(ngModel)]="confirmPassword" type="password" placeholder="Repite la nueva clave" autocomplete="new-password" />
+      @if (passwordError(); as e) {
+        <div class="error">{{ e }}</div>
+      }
+      <div class="actions">
+        <button class="btn btn-primary" [disabled]="saving() || !currentPassword || !newPassword || !confirmPassword" (click)="savePassword()">
+          {{ saving() ? 'Guardando…' : 'Guardar' }}
+        </button>
+        <button class="btn btn-outline" (click)="closeChangePassword()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+}

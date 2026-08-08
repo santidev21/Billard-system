@@ -1,0 +1,18 @@
+<section class="login-wrap">
+  <form class="login-card glass" (ngSubmit)="submit()">
+    <h2>Acceso Admin</h2>
+    <p class="hint">Ingresa la clave de acceso al panel de administración.</p>
+
+    <label>Clave de ingreso</label>
+    <input [(ngModel)]="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+    @if (error(); as e) {
+      <div class="error">{{ e }}</div>
+    }
+
+    <button class="btn btn-primary" [disabled]="loading() || !password">
+      {{ loading() ? '…' : 'Entrar' }}
+    </button>
+    <button type="button" class="btn btn-outline" routerLink="/play">Volver al jugador</button>
+  </form>
+</section>

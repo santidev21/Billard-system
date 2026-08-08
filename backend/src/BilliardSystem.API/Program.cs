@@ -6,6 +6,19 @@ using BilliardSystem.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Pin the SQLite file to the content root so history survives restarts
+// regardless of the shell's current directory.
+var conn = builder.Configuration.GetConnectionString("BilliardDatabase");
+if (conn is not null && conn.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+{
+    var file = conn["Data Source=".Length..].Trim();
+    if (!Path.IsPathRooted(file) && !string.Equals(file, ":memory:", StringComparison.OrdinalIgnoreCase))
+    {
+        var absolute = Path.Combine(builder.Environment.ContentRootPath, file);
+        builder.Configuration["ConnectionStrings:BilliardDatabase"] = $"Data Source={absolute}";
+    }
+}
+
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.ConfigureHttpJsonOptions(options =>

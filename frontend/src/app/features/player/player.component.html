@@ -3,25 +3,24 @@
     <div class="table-badge">MESA: {{ tableNumber() }}</div>
     <h2>{{ tableName() }}</h2>
     <div class="mode-switch">
-      @if (gameMode() !== 'FreeMode') {
-        <button [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
-        <button [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
-      } @else {
-        <button class="active">Modo Libre</button>
-        <button (click)="selectMode('Managed')">Administrado</button>
-      }
+      <button [disabled]="running()" [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
+      <button [disabled]="running()" [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
     </div>
   </header>
 
   @if (!running()) {
     <div class="start-box">
-      <div class="names">
-        <label>Jugador 1 (Blanco)</label>
-        <input [(ngModel)]="whiteInput" placeholder="Jugador 1" />
-        <label>Jugador 2 (Amarillo)</label>
-        <input [(ngModel)]="yellowInput" placeholder="Jugador 2" />
-      </div>
-      <button class="btn btn-primary big" (click)="startSession()">Iniciar Partida</button>
+      @if (gameMode() === 'Managed') {
+        <p class="waiting-msg">La mesa está libre. Pidele al mesero que inicie tu partida.</p>
+      } @else {
+        <div class="names">
+          <label>Jugador 1 (Blanco)</label>
+          <input [(ngModel)]="whiteInput" placeholder="Jugador 1" />
+          <label>Jugador 2 (Amarillo)</label>
+          <input [(ngModel)]="yellowInput" placeholder="Jugador 2" />
+        </div>
+        <button class="btn btn-primary big" (click)="startSession()">Iniciar Modo Libre</button>
+      }
     </div>
   } @else {
     <div class="arena">
@@ -96,17 +95,24 @@
         <button class="btn btn-outline" [class.sent]="requestSent() === 'waiter'" (click)="callWaiter()">
           {{ requestSent() === 'waiter' ? '✓ Llamado' : 'Llamar Mesero' }}
         </button>
-        <button class="btn btn-outline" [class.sent]="requestSent() === 'check'" (click)="requestCheck()">
-          {{ requestSent() === 'check' ? '✓ Solicitado' : 'Pedir Cuenta' }}
+        <button class="btn btn-danger long" [class.sent]="requestSent() === 'check'" (click)="requestCheck()">
+          {{ requestSent() === 'check' ? '✓ Cuenta solicitada' : 'Pedir Cuenta' }}
         </button>
       }
       <button class="btn btn-outline" (click)="showConsumptionLog.set(true)">Ver Consumo</button>
+      <button class="btn btn-outline" (click)="showRoundHistory()">Historial de Rondas</button>
       <button class="btn btn-primary" (click)="finishRound()">Finalizar Ronda</button>
-      <button class="btn btn-danger long" (click)="onRequestClose()">Terminar Partida</button>
+      @if (gameMode() === 'FreeMode') {
+        <button class="btn btn-danger long" (click)="onRequestClose()">Terminar Partida</button>
+      }
     </div>
 
     @if (lastRound(); as last) {
       <div class="round-toast">{{ last }}</div>
+    }
+
+    @if (blockedMsg(); as msg) {
+      <div class="round-toast blocked">{{ msg }}</div>
     }
   }
 
@@ -135,6 +141,65 @@
           }
         </tbody>
       </table>
+    </div>
+  </div>
+}
+
+@if (showRounds()) {
+  <div class="rounds-overlay overlay">
+    <div class="card">
+      <header>
+        <h3>Historial de Rondas</h3>
+        <button class="btn btn-outline close" (click)="closeRounds()">✕</button>
+      </header>
+      @if (rounds(); as rh) {
+        <div class="rounds-score">
+          <div class="rk bw"><span class="rk-lbl">{{ whiteName() }} (Blanco)</span><span class="rk-val">{{ rh.whiteRounds }}</span></div>
+          <div class="rk by"><span class="rk-lbl">{{ yellowName() }} (Amarillo)</span><span class="rk-val">{{ rh.yellowRounds }}</span></div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ronda</th><th>Blanco</th><th>Amarillo</th><th>Resultado</th></tr>
+          </thead>
+          <tbody>
+            @for (r of rh.rounds; track r.roundNumber) {
+              <tr>
+                <td>#{{ r.roundNumber }}</td>
+                <td>{{ r.whiteScore }}</td>
+                <td>{{ r.yellowScore }}</td>
+                <td>{{ r.winnerName ? (r.winnerName + ' gana') : 'Empate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (rh.rounds.length > 0) {
+          <p class="rk-leader">
+            @if (rh.whiteRounds > rh.yellowRounds) { Ganando {{ whiteName() }} · {{ rh.whiteRounds }} a {{ rh.yellowRounds }} }
+            @else if (rh.yellowRounds > rh.whiteRounds) { Ganando {{ yellowName() }} · {{ rh.yellowRounds }} a {{ rh.whiteRounds }} }
+            @else { Empate en rondas ({{ rh.whiteRounds }}-{{ rh.yellowRounds }}) }
+          </p>
+        }
+      } @else {
+        <p class="empty">Sin rondas registradas todavía.</p>
+      }
+    </div>
+  </div>
+}
+
+@if (showEnded(); as es) {
+  <div class="confirm overlay">
+    <div class="card">
+      <h3>⏱️ Tu tiempo de juego terminó</h3>
+      @if (endedSummary(); as s) {
+        <div class="ended-summary">
+          <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
+          <div class="es-row"><span>Total consumo</span><b>${{ fmt(s.consumptionTotal) }}</b></div>
+          <div class="es-row grand"><span>Total</span><b>${{ fmt(s.grandTotal) }}</b></div>
+        </div>
+      }
+      <div class="confirm-actions">
+        <button class="btn btn-primary" (click)="closeEnded()">Entendido</button>
+      </div>
     </div>
   </div>
 }

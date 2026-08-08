@@ -21,16 +21,23 @@ export class CircularVideoBuffer {
       return;
     }
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: preferredDeviceId ? { deviceId: { exact: preferredDeviceId } } : true,
-    });
+    const constraints: MediaStreamConstraints = {
+      audio: false,
+      video: preferredDeviceId
+        ? { deviceId: { exact: preferredDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } }
+        : { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
+    };
 
-    this.recorder = new MediaRecorder(this.stream);
+    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    this.recorder = new MediaRecorder(this.stream, { videoBitsPerSecond: 1_500_000 });
     this.recorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {
         this.chunks.push(event.data);
+        // Keep the first chunk (WebM init segment) and slide the rest, otherwise
+        // the concatenated blob loses its initialization data and won't decode.
         while (this.chunks.length > this.maxChunks) {
-          this.chunks.shift();
+          this.chunks.splice(1, this.chunks.length - this.maxChunks);
         }
         this.streamSize.set(this.chunks.length);
       }

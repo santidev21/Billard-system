@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
+import { RouterLink, RouterOutlet, Router } from '@angular/router';
 import { NavigationEnd } from '@angular/router';
 
 import { SignalRService } from './core/signalr.service';
@@ -7,7 +7,7 @@ import { OfflineQueueService } from './core/offline-queue.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
   standalone: true,
