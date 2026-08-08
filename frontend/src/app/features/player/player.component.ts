@@ -7,6 +7,7 @@ import { SignalRService } from '../../core/signalr.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { GameMode, TableDetail } from '../../core/models';
 import { CameraViewComponent } from './camera-view.component';
+import { SpinnerComponent } from '../../shared/spinner.component';
 
 interface UiConsumption {
   id: string;
@@ -18,7 +19,7 @@ interface UiConsumption {
 
 @Component({
   selector: 'app-player',
-  imports: [FormsModule, CameraViewComponent],
+  imports: [FormsModule, CameraViewComponent, SpinnerComponent],
   templateUrl: './player.component.html',
   styleUrls: ['./player.component.css'],
   standalone: true,
@@ -29,8 +30,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private readonly queue = inject(OfflineQueueService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly gameMode = signal<GameMode>((localStorage.getItem('tableMode') as GameMode) ?? 'Managed');
+  readonly gameMode = signal<GameMode>('Managed');
   readonly blockedMsg = signal<string | null>(null);
+  readonly loading = signal(false);
   readonly showEnded = signal(false);
   readonly endedSummary = signal<{ time: string; consumptionTotal: number; grandTotal: number } | null>(null);
   readonly whiteName = signal('Jugador 1');
@@ -49,7 +51,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly roundNumber = signal(0);
   readonly lastRound = signal<string | null>(null);
   readonly showRounds = signal(false);
-  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] } | null>(null);
+  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] } | null>(null);
   readonly requestSent = signal<'waiter' | 'check' | null>(null);
   readonly products = signal<{ id: string; name: string; price: number }[]>([]);
 
@@ -97,6 +99,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   selectedProductId = '';
 
   private tickTimer: ReturnType<typeof setInterval> | undefined;
+  private pollTimer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     private readonly router: Router
@@ -104,14 +107,23 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.route.params.subscribe(async (params) => {
+      this.loading.set(true);
       const id = params['id'];
       this.tableId.set(id ?? '');
+      // /tables/:id siempre es modo administrado; /play sin id es modo libre.
+      this.gameMode.set(id ? 'Managed' : 'FreeMode');
+
       if (id) {
-        await this.loadTable(id);
-        await this.signalr.joinTable(id);
+        await this.resolveAndSetTable(id);
+        if (this.tableId()) {
+          await this.signalr.joinTable(this.tableId());
+        }
       } else {
         await this.autoSelectTable();
       }
+      this.loading.set(false);
+
+      this.startPolling();
     });
     await this.loadProducts();
 
@@ -155,6 +167,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.showEnded.set(true);
       }
     });
+    effect(() => {
+      const s = this.signalr.sessionStarted();
+      if (s && s.tableId === this.tableId()) {
+        this.showEnded.set(false);
+        this.endedSummary.set(null);
+        void this.refreshFromServer();
+      }
+    });
   }
 
   closeEnded(): void {
@@ -170,6 +190,17 @@ export class PlayerComponent implements OnInit, OnDestroy {
       const detail = await this.api.getTable(this.tableId());
       if (detail.activeMatch) {
         this.applyDetail(detail);
+      } else if (this.running() && this.startedAt()) {
+        this.endedSummary.set({
+          time: this.elapsed(),
+          consumptionTotal: this.consumptionTotal(),
+          grandTotal: this.grandTotal(),
+        });
+        this.showEnded.set(true);
+        this.running.set(false);
+        this.whiteScore.set(0);
+        this.yellowScore.set(0);
+        this.startedAt.set(null);
       } else {
         this.running.set(false);
         this.whiteScore.set(0);
@@ -181,10 +212,24 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async resolveAndSetTable(identifier: string): Promise<void> {
+    try {
+      const detail = await this.api.getTable(identifier);
+      this.tableId.set(detail.id);
+      this.tableName.set(detail.name);
+      this.hourlyRate.set(String(detail.hourlyRate));
+      localStorage.setItem('tableName', detail.name);
+      localStorage.setItem('defaultRate', String(detail.hourlyRate));
+      this.applyDetail(detail);
+    } catch {
+      // offline: rely on cached defaults
+    }
+  }
+
   private async autoSelectTable(): Promise<void> {
     try {
       const tables = await this.api.getTables();
-      const pick = tables.find((t) => t.status === 'Available') ?? tables[0];
+      const pick = tables.find((t) => t.status === 'Available' && t.isActive) ?? tables.find((t) => t.isActive) ?? tables[0];
       if (pick) {
         this.tableId.set(pick.id);
         this.tableName.set(pick.name);
@@ -207,6 +252,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.tickTimer) {
       clearInterval(this.tickTimer);
+    }
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
     }
   }
 
@@ -252,18 +300,19 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
   }
 
-  private genTx(): string {
-    return crypto.randomUUID();
+  private startPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+    this.pollTimer = setInterval(() => {
+      if (this.tableId()) {
+        void this.refreshFromServer();
+      }
+    }, 8000);
   }
 
-  selectMode(mode: GameMode): void {
-    if (this.running()) {
-      this.blockedMsg.set('Primero pide al mesero que cierre tu cuenta.');
-      setTimeout(() => this.blockedMsg.set(null), 3500);
-      return;
-    }
-    this.gameMode.set(mode);
-    localStorage.setItem('tableMode', mode);
+  private genTx(): string {
+    return crypto.randomUUID();
   }
 
   saveNames(): void {
@@ -322,6 +371,21 @@ export class PlayerComponent implements OnInit, OnDestroy {
   closeRounds(): void {
     this.showRounds.set(false);
     this.rounds.set(null);
+  }
+
+  formatDuration(duration: string | null | undefined): string {
+    if (!duration) {
+      return '—';
+    }
+    const matchNum = duration.match(/(\d+):(\d+):(\d+)/);
+    if (matchNum) {
+      const h = Number(matchNum[1]);
+      const m = Number(matchNum[2]);
+      const s = Number(matchNum[3]);
+      const mm = h * 60 + m;
+      return `${String(mm).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return duration;
   }
 
   formatAt(value: string | undefined): string {

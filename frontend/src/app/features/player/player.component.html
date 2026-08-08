@@ -1,11 +1,11 @@
 <section class="player-shell">
+  @if (loading()) {
+    <div class="player-loading"><app-spinner [label]="'Conectando a la mesa…'" /></div>
+  }
+
   <header class="panel-head">
     <div class="table-badge">MESA: {{ tableNumber() }}</div>
     <h2>{{ tableName() }}</h2>
-    <div class="mode-switch">
-      <button [disabled]="running()" [class.active]="gameMode() === 'Managed'" (click)="selectMode('Managed')">Administrado</button>
-      <button [disabled]="running()" [class.active]="gameMode() === 'FreeMode'" (click)="selectMode('FreeMode')">Modo Libre</button>
-    </div>
   </header>
 
   @if (!running()) {
@@ -43,13 +43,10 @@
         <app-camera-view />
         <div class="virtual-table">
           <div class="table-felt">
-            <div class="pocket p0"></div>
-            <div class="pocket p1"></div>
-            <div class="pocket p2"></div>
-            <div class="pocket p3"></div>
-            <div class="pocket p4"></div>
-            <div class="player-ball w-ball"></div>
-            <div class="player-ball y-ball"></div>
+            <div class="felt-line"></div>
+            <div class="player-ball y-ball pos-y"></div>
+            <div class="player-ball r-ball pos-r"></div>
+            <div class="player-ball w-ball pos-w"></div>
             <div class="t-head">Tres Bandas</div>
             <div class="t-carambolas">Carambolas: {{ totalCarambolas() }}</div>
           </div>
@@ -159,7 +156,7 @@
         </div>
         <table>
           <thead>
-            <tr><th>Ronda</th><th>Blanco</th><th>Amarillo</th><th>Resultado</th></tr>
+            <tr><th>Ronda</th><th>Blanco</th><th>Amarillo</th><th>Duración</th><th>Resultado</th></tr>
           </thead>
           <tbody>
             @for (r of rh.rounds; track r.roundNumber) {
@@ -167,6 +164,7 @@
                 <td>#{{ r.roundNumber }}</td>
                 <td>{{ r.whiteScore }}</td>
                 <td>{{ r.yellowScore }}</td>
+                <td>{{ formatDuration(r.duration) }}</td>
                 <td>{{ r.winnerName ? (r.winnerName + ' gana') : 'Empate' }}</td>
               </tr>
             }
@@ -189,7 +187,8 @@
 @if (showEnded(); as es) {
   <div class="confirm overlay">
     <div class="card">
-      <h3>⏱️ Tu tiempo de juego terminó</h3>
+      <h3>⏱️ La partida ha finalizado</h3>
+      <p class="msg">El juego terminó. Contacta con un mesero para iniciar uno nuevo.</p>
       @if (endedSummary(); as s) {
         <div class="ended-summary">
           <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>

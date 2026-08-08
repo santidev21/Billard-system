@@ -6,6 +6,7 @@
 }
 
 .player-shell { display: flex; flex-direction: column; gap: 0.75rem; height: 100%; flex: 1; min-height: 0; }
+.player-loading { display: flex; justify-content: center; padding: 3rem 0; }
 
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .panel-head h2 { margin: 0; font-size: 1.5rem; }
@@ -18,17 +19,6 @@
   background: var(--pa-color);
   color: #fff;
 }
-.mode-switch { display: flex; gap: 0.4rem; }
-.mode-switch button {
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-.mode-switch button.active { background: var(--pa-color); color: #fff; }
-
 .start-box {
   display: flex;
   flex-direction: column;
@@ -147,23 +137,26 @@
   justify-content: center;
   gap: 0.5rem;
 }
-.pocket {
+.felt-line {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #0f261a;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.9);
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  height: 0;
+  border-top: 2px dashed rgba(255, 255, 255, 0.4);
+  pointer-events: none;
 }
-.p0 { top: -6px; left: -6px; } .p1 { top: -6px; right: -6px; }
-.p2 { bottom: -6px; left: -6px; } .p3 { bottom: -6px; right: -6px; }
-.p4 { top: 50%; left: -7px; transform: translateY(-50%); }
 .player-ball {
-  width: 18px; height: 18px; border-radius: 50%;
+  position: absolute;
+  width: 20px; height: 20px; border-radius: 50%;
   box-shadow: inset -3px -3px 6px rgba(0,0,0,0.5);
 }
+.pos-y { top: 18%; left: 12%; }
+.pos-r { top: 18%; right: 12%; }
+.pos-w { top: 64%; left: 50%; transform: translateX(-50%); }
 .w-ball { background: radial-gradient(circle at 35% 30%, #fff, #cfd8e3); }
 .y-ball { background: radial-gradient(circle at 35% 30%, #fff4a3, var(--yellow-ball)); }
+.r-ball { background: radial-gradient(circle at 35% 30%, #ff8a80, #c62828); }
 .t-head { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.85); }
 .t-carambolas { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; }
 
@@ -199,7 +192,7 @@
 }
 .round-toast.blocked { background: var(--danger); }
 
-.mode-switch button:disabled { opacity: 0.4; cursor: not-allowed; }
+.toolbar .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .ended-summary { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.25rem 0 0.75rem; }
 .es-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(0,0,0,0.28); border-radius: 10px; }

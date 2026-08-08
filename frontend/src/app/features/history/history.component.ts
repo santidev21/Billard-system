@@ -3,9 +3,11 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../core/api.service';
 import { MatchListItem } from '../../core/models';
 import { fmtMoney } from '../../core/format';
+import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
   selector: 'app-history',
+  imports: [SpinnerComponent],
   templateUrl: './history.component.html',
   styleUrls: ['./history.component.css'],
   standalone: true,
@@ -15,9 +17,19 @@ export class HistoryComponent implements OnInit {
 
   readonly fmtMoney = fmtMoney;
   readonly matches = signal<MatchListItem[]>([]);
+  readonly loading = signal(false);
 
   async ngOnInit(): Promise<void> {
-    this.matches.set(await this.api.getMatches());
+    this.loading.set(true);
+    try {
+      this.matches.set(await this.api.getMatches());
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  gameMode(mode: string): string {
+    return mode === 'FreeMode' ? 'Libre' : 'Administrado';
   }
 
   duration(m: MatchListItem): string {

@@ -8,13 +8,14 @@ public sealed class MatchRound : Entity
     {
     }
 
-    public MatchRound(Guid matchHistoryId, int roundNumber, int whiteScore, int yellowScore, string? winnerName)
+    public MatchRound(Guid matchHistoryId, int roundNumber, int whiteScore, int yellowScore, string? winnerName, DateTimeOffset startedAt)
     {
         MatchHistoryId = matchHistoryId;
         RoundNumber = roundNumber;
         WhiteScore = whiteScore;
         YellowScore = yellowScore;
         WinnerName = winnerName;
+        StartedAt = startedAt;
     }
 
     public Guid MatchHistoryId { get; private set; }
@@ -23,5 +24,7 @@ public sealed class MatchRound : Entity
     public int WhiteScore { get; private set; }
     public int YellowScore { get; private set; }
     public string? WinnerName { get; private set; }
+    public DateTimeOffset StartedAt { get; private set; }
     public DateTimeOffset EndedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public TimeSpan Duration => EndedAt - StartedAt;
 }

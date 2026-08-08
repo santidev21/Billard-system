@@ -32,17 +32,29 @@ export class ApiService {
   getTables(): Promise<TableResponse[]> {
     return lastValueFrom(this.http.get<TableResponse[]>(`${this.base}/tables`));
   }
-  createTable(name: string, hourlyRate: number): Promise<TableResponse> {
-    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables`, { name, hourlyRate }));
+  createTable(name: string, hourlyRate: number, code?: string): Promise<TableResponse> {
+    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables`, { name, hourlyRate, code }));
   }
-  updateTable(id: string, name: string, hourlyRate: number): Promise<TableResponse> {
-    return lastValueFrom(this.http.put<TableResponse>(`${this.base}/tables/${id}`, { name, hourlyRate }));
+  updateTable(id: string, name: string, hourlyRate: number, code?: string): Promise<TableResponse> {
+    return lastValueFrom(this.http.put<TableResponse>(`${this.base}/tables/${id}`, { name, hourlyRate, code }));
   }
   updateAllRates(hourlyRate: number): Promise<{ updated: number }> {
     return lastValueFrom(this.http.put<{ updated: number }>(`${this.base}/tables/rate/all`, { hourlyRate }));
   }
   getTable(id: string): Promise<TableDetail> {
     return lastValueFrom(this.http.get<TableDetail>(`${this.base}/tables/${id}`));
+  }
+  attendTable(id: string): Promise<TableResponse> {
+    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables/${id}/attend`, {}));
+  }
+  disableTable(id: string): Promise<TableResponse> {
+    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables/${id}/disable`, {}));
+  }
+  enableTable(id: string): Promise<TableResponse> {
+    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables/${id}/enable`, {}));
+  }
+  deleteTable(id: string): Promise<{ ok: boolean }> {
+    return lastValueFrom(this.http.delete<{ ok: boolean }>(`${this.base}/tables/${id}`));
   }
   startSession(
     id: string,
@@ -89,8 +101,8 @@ export class ApiService {
       this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/tables/${id}/finish-round`, { transactionId })
     );
   }
-  getRounds(id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] }> {
-    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string }[] }>(`${this.base}/tables/${id}/rounds`));
+  getRounds(id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }> {
+    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }>(`${this.base}/tables/${id}/rounds`));
   }
 
   // Catalog

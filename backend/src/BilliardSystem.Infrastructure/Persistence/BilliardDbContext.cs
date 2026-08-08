@@ -68,6 +68,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.ToTable("Tables");
             builder.HasKey(table => table.Id);
             builder.Property(table => table.Name).HasMaxLength(80).IsRequired();
+            builder.Property(table => table.Code).HasMaxLength(20).IsRequired();
+            builder.HasIndex(table => table.Code).IsUnique();
             builder.Property(table => table.HourlyRate).HasPrecision(10, 2);
             builder.Property(table => table.Status).HasConversion<string>().HasMaxLength(40);
         });
@@ -199,7 +201,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
         var water = Guid.Parse("30000000-0000-0000-0000-000000000001");
 
         modelBuilder.Entity<BilliardTable>().HasData(
-            new { Id = table1, Name = "Mesa 1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, ActiveMatchId = (Guid?)null });
+            new { Id = table1, Name = "Mesa 1", Code = "M1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, IsActive = true, ActiveMatchId = (Guid?)null });
 
         modelBuilder.Entity<ProductCategory>().HasData(
             new { Id = drinks, Name = "Bebidas", SortOrder = 1, IsActive = true });

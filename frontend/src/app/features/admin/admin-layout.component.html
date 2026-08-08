@@ -19,6 +19,20 @@
   </div>
 </div>
 
+@if (callPopup(); as n) {
+  <div class="popup-backdrop" (click)="closePopup()">
+    <div class="popup-card glass" (click)="$event.stopPropagation()">
+      <div class="popup-icon">🔔</div>
+      <h3>{{ popupTitle(n) }}</h3>
+      <p>{{ popupBody(n) }}</p>
+      <div class="popup-actions">
+        <button class="btn btn-primary" (click)="attendFromPopup(n)">Atender ahora</button>
+        <button class="btn btn-outline" (click)="closePopup()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showChangePassword()) {
   <div class="overlay">
     <div class="card glass">

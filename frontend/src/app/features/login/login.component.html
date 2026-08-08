@@ -11,7 +11,11 @@
     }
 
     <button class="btn btn-primary" [disabled]="loading() || !password">
-      {{ loading() ? '…' : 'Entrar' }}
+      @if (loading()) {
+        <app-spinner [label]="'Ingresando…'" />
+      } @else {
+        Entrar
+      }
     </button>
     <button type="button" class="btn btn-outline" routerLink="/play">Volver al jugador</button>
   </form>

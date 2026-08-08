@@ -1,5 +1,8 @@
 <section>
   <h2 class="page-title">Registro de Auditoría</h2>
+  @if (loading()) {
+    <div class="spinner-center"><app-spinner [label]="'Cargando auditoría…'" /></div>
+  }
   <div class="glass list">
     @for (log of logs(); track log.id) {
       <div class="entry">

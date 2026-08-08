@@ -1,8 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { ApiService } from '../../core/api.service';
+import { SignalRService } from '../../core/signalr.service';
+import type { AdminNotification } from '../../core/signalr.service';
+import { fmtMoney } from '../../core/format';
 
 @Component({
   selector: 'app-admin-layout',
@@ -14,13 +18,54 @@ import { AuthService } from '../../core/auth.service';
 export class AdminLayoutComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
+  private readonly signalr = inject(SignalRService);
 
   readonly showChangePassword = signal(false);
+  readonly callPopup = signal<AdminNotification | null>(null);
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
   readonly passwordError = signal<string | null>(null);
   readonly saving = signal(false);
+
+  constructor() {
+    effect(() => {
+      const n = this.signalr.adminNotification();
+      if (n) {
+        this.callPopup.set(n);
+      }
+    });
+  }
+
+  popupTitle(n: AdminNotification | null): string {
+    if (!n) {
+      return '';
+    }
+    return n.type === 'check' ? 'Piden la cuenta' : 'Solicitan al mesero';
+  }
+
+  popupBody(n: AdminNotification | null): string {
+    if (!n) {
+      return '';
+    }
+    return n.type === 'check'
+      ? `La mesa ${n.tableName} quiere cerrar su cuenta · Total $${fmtMoney(n.total ?? 0)}`
+      : `La mesa ${n.tableName} te está esperando.`;
+  }
+
+  async attendFromPopup(n: AdminNotification | null): Promise<void> {
+    this.callPopup.set(null);
+    if (!n) {
+      return;
+    }
+    await this.api.attendTable(n.tableId).catch(() => undefined);
+  }
+
+  closePopup(): void {
+    this.callPopup.set(null);
+  }
+
 
   async logout(): Promise<void> {
     this.auth.logout();

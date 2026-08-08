@@ -6,10 +6,11 @@ import { SignalRService } from '../../core/signalr.service';
 import { DashboardSummary, TableResponse, TableDetail, TopProduct } from '../../core/models';
 import { fmtMoney } from '../../core/format';
 import { CameraViewComponent } from '../player/camera-view.component';
+import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, CameraViewComponent],
+  imports: [FormsModule, CameraViewComponent, SpinnerComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
   standalone: true,
@@ -19,6 +20,7 @@ export class DashboardComponent implements OnInit {
   private readonly signalr = inject(SignalRService);
 
   readonly tables = signal<TableResponse[]>([]);
+  readonly loading = signal(true);
   readonly summary = signal<DashboardSummary | null>(null);
   readonly topProducts = signal<TopProduct[]>([]);
   readonly details = signal<Record<string, TableDetail>>({});
@@ -31,6 +33,7 @@ export class DashboardComponent implements OnInit {
   readonly fmtMoney = fmtMoney;
 
   newTableName = '';
+  newTableCode = '';
   newTableRate = 12000;
   toastProductId = '';
   selectedWhite = '';
@@ -129,15 +132,20 @@ export class DashboardComponent implements OnInit {
   }
 
   private async refresh(): Promise<void> {
-    const [tables, summary, top] = await Promise.all([
-      this.api.getTables(),
-      this.api.getDashboardSummary(),
-      this.api.getTopProducts().catch(() => [] as TopProduct[]),
-    ]);
-    this.tables.set(tables);
-    this.summary.set(summary);
-    this.topProducts.set(top);
-    this.details.set(await this.loadDetails(tables));
+    this.loading.set(true);
+    try {
+      const [tables, summary, top] = await Promise.all([
+        this.api.getTables(),
+        this.api.getDashboardSummary(),
+        this.api.getTopProducts().catch(() => [] as TopProduct[]),
+      ]);
+      this.tables.set(tables);
+      this.summary.set(summary);
+      this.topProducts.set(top);
+      this.details.set(await this.loadDetails(tables));
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   private async loadDetails(tables: TableResponse[]): Promise<Record<string, TableDetail>> {
@@ -173,14 +181,71 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  statusName(status: string): string {
+    switch (status) {
+      case 'Available': return 'Libre';
+      case 'Occupied': return 'Ocupada';
+      case 'WaitingForWaiter': return 'Esperando mesero';
+      case 'WaitingForCheck': return 'Esperando cuenta';
+      case 'OutOfService': return 'Fuera de servicio';
+      default: return status;
+    }
+  }
+
   async addTable(): Promise<void> {
     if (!this.newTableName.trim()) {
       return;
     }
-    await this.api.createTable(this.newTableName.trim(), 0);
+    await this.api.createTable(this.newTableName.trim(), 0, this.newTableCode.trim() || undefined);
     this.newTableName = '';
+    this.newTableCode = '';
     this.showAddTable.set(false);
     await this.refresh();
+  }
+
+  async attendTable(tableId: string): Promise<void> {
+    try {
+      await this.api.attendTable(tableId);
+    } catch {
+      // petición ya resuelta
+    }
+    await this.refresh();
+    const sel = this.selectedTable();
+    if (sel) {
+      await this.openTable(sel.id);
+    }
+  }
+
+  async toggleEnabled(table: TableResponse): Promise<void> {
+    try {
+      if (table.isActive) {
+        await this.api.disableTable(table.id);
+      } else {
+        await this.api.enableTable(table.id);
+      }
+    } catch {
+      // ignore
+    }
+    await this.refresh();
+  }
+
+  async deleteTable(tableId: string): Promise<void> {
+    const ok = confirm(`¿Eliminar definitivamente esta mesa? Esta acción no se puede deshacer.`);
+    if (!ok) {
+      return;
+    }
+    try {
+      await this.api.deleteTable(tableId);
+    } catch {
+      alert('No se pudo borrar: la mesa tiene partida activa o historial.');
+    }
+    this.selectedTable.set(null);
+    await this.refresh();
+  }
+
+  copyLink(table: TableResponse): void {
+    const url = `${window.location.origin}/tables/${encodeURIComponent(table.code)}`;
+    void navigator.clipboard?.writeText(url).catch(() => undefined);
   }
 
   async saveAllRates(): Promise<void> {
@@ -237,7 +302,7 @@ export class DashboardComponent implements OnInit {
     if (!table) {
       return;
     }
-    this.selectedTable.set({ id: table.id, name: table.name, status: table.status, hourlyRate: table.hourlyRate, activeMatch: null, activeMatchId: null });
+    this.selectedTable.set({ id: table.id, name: table.name, code: table.code, status: table.status, hourlyRate: table.hourlyRate, isActive: table.isActive, activeMatch: null, activeMatchId: null });
     this.selectedWhite = 'Jugador 1';
     this.selectedYellow = 'Jugador 2';
     this.showStartForm = true;

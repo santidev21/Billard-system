@@ -75,19 +75,45 @@ public static class BilliardEndpoints
                 .Select(table => new TableResponse(
                     table.Id,
                     table.Name,
+                    table.Code,
                     table.Status.ToString(),
                     table.HourlyRate,
+                    table.IsActive,
                     table.ActiveMatchId))
                 .ToListAsync(cancellationToken);
 
             return Results.Ok(tables);
         });
 
-        api.MapGet("/tables/{id}", async (Guid id, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
+        api.MapGet("/tables/lookup/{identifier}", async (string identifier, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
-            var table = await dbContext.Tables
-                .AsNoTracking()
-                .FirstOrDefaultAsync(table => table.Id == id, cancellationToken);
+            var table = await FindTableAsync(dbContext, identifier, cancellationToken);
+            if (table is null)
+            {
+                return Results.NotFound();
+            }
+
+            var match = table.ActiveMatchId is { } matchId
+                ? await dbContext.MatchHistories
+                    .AsNoTracking()
+                    .Include(history => history.Consumptions)
+                    .FirstOrDefaultAsync(history => history.Id == matchId, cancellationToken)
+                : null;
+
+            return Results.Ok(new TableDetailResponse(
+                table.Id,
+                table.Name,
+                table.Code,
+                table.Status.ToString(),
+                table.HourlyRate,
+                table.IsActive,
+                table.ActiveMatchId,
+                match is null ? null : ToMatchDetailResponse(match)));
+        });
+
+        api.MapGet("/tables/{identifier}", async (string identifier, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
+        {
+            var table = await FindTableAsync(dbContext, identifier, cancellationToken);
 
             if (table is null)
             {
@@ -104,8 +130,10 @@ public static class BilliardEndpoints
             return Results.Ok(new TableDetailResponse(
                 table.Id,
                 table.Name,
+                table.Code,
                 table.Status.ToString(),
                 table.HourlyRate,
+                table.IsActive,
                 table.ActiveMatchId,
                 match is null ? null : ToMatchDetailResponse(match)));
         });
@@ -118,10 +146,22 @@ public static class BilliardEndpoints
             }
 
             var rate = request.HourlyRate > 0 ? request.HourlyRate : await GetGlobalRateAsync(dbContext, cancellationToken);
+            var code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code.Trim().ToUpperInvariant();
+            if (code is null)
+            {
+                code = await NextTableCodeAsync(dbContext, cancellationToken);
+            }
+
+            if (await dbContext.Tables.AnyAsync(t => t.Code == code, cancellationToken))
+            {
+                return Results.BadRequest(new { message = $"El código '{code}' ya está en uso." });
+            }
+
             var table = new BilliardTable(request.Name.Trim(), rate);
+            table.SetCode(code);
             dbContext.Tables.Add(table);
             await dbContext.SaveChangesAsync(cancellationToken);
-            return Results.Ok(new TableResponse(table.Id, table.Name, table.Status.ToString(), table.HourlyRate, table.ActiveMatchId));
+            return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
         });
 
         api.MapPut("/tables/{id}", async (Guid id, UpdateTableRequest request, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
@@ -137,13 +177,25 @@ public static class BilliardEndpoints
                 table.Rename(request.Name.Trim());
             }
 
+            if (!string.IsNullOrWhiteSpace(request.Code)
+                && !string.Equals(table.Code, request.Code.Trim().ToUpperInvariant(), StringComparison.Ordinal)
+                && await dbContext.Tables.AnyAsync(t => t.Code == request.Code.Trim().ToUpperInvariant(), cancellationToken))
+            {
+                return Results.BadRequest(new { message = $"El código '{request.Code}' ya está en uso." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Code))
+            {
+                table.SetCode(request.Code);
+            }
+
             if (request.HourlyRate > 0)
             {
                 table.SetHourlyRate(request.HourlyRate);
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
-            return Results.Ok(new TableResponse(table.Id, table.Name, table.Status.ToString(), table.HourlyRate, table.ActiveMatchId));
+            return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
         });
 
         api.MapPut("/tables/rate/all", async (UpdateAllRatesRequest request, BilliardDbContext dbContext, IHubContext<TableHub> hub, CancellationToken cancellationToken) =>
@@ -173,6 +225,95 @@ public static class BilliardEndpoints
 
             await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = (Guid?)null, status = "RateChanged" }, cancellationToken);
             return Results.Ok(new { updated = tables.Count });
+        });
+
+        api.MapPost("/tables/{id}/attend", async (
+            Guid id,
+            BilliardDbContext dbContext,
+            IHubContext<TableHub> hub,
+            CancellationToken cancellationToken) =>
+        {
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            if (table is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (table.Status is BilliardTableStatus.WaitingForWaiter or BilliardTableStatus.WaitingForCheck)
+            {
+                table.MarkAttended();
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+                await hub.Clients.Group($"table:{id}").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            }
+
+            return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
+        });
+
+        api.MapPost("/tables/{id}/disable", async (
+            Guid id,
+            IHubContext<TableHub> hub,
+            BilliardDbContext dbContext,
+            CancellationToken cancellationToken) =>
+        {
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            if (table is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (table.ActiveMatchId is not null)
+            {
+                return Results.BadRequest(new { message = "No se puede inhabilitar una mesa con partida activa." });
+            }
+
+            table.Disable();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
+        });
+
+        api.MapPost("/tables/{id}/enable", async (
+            Guid id,
+            IHubContext<TableHub> hub,
+            BilliardDbContext dbContext,
+            CancellationToken cancellationToken) =>
+        {
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            if (table is null)
+            {
+                return Results.NotFound();
+            }
+
+            table.Enable();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
+        });
+
+        api.MapDelete("/tables/{id}", async (Guid id, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
+        {
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+            if (table is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (table.ActiveMatchId is not null)
+            {
+                return Results.BadRequest(new { message = "No se puede borrar una mesa con partida activa. Ciérrala primero." });
+            }
+
+            var hasHistory = await dbContext.MatchHistories.AnyAsync(history => history.TableId == id, cancellationToken);
+            if (hasHistory)
+            {
+                return Results.BadRequest(new { message = "Esta mesa tiene historial de partidas; inhabílitala en su lugar." });
+            }
+
+            dbContext.Tables.Remove(table);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await WriteAuditAsync(dbContext, AuditActionType.TableDeleted, null, id, null, null, $"Se eliminó la mesa '{table.Name}'.", cancellationToken);
+            return Results.Ok(new { ok = true });
         });
 
         api.MapGet("/products", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
@@ -628,7 +769,8 @@ public static class BilliardEndpoints
                     round.WhiteScore,
                     round.YellowScore,
                     round.WinnerName,
-                    round.EndedAt))
+                    round.EndedAt,
+                    round.Duration))
                 .ToArray();
 
             var whiteRounds = rounds.Count(r => r.WinnerName == match.WhitePlayerName);
@@ -673,7 +815,7 @@ public static class BilliardEndpoints
         api.MapGet("/dashboard/summary", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             var today = DateTimeOffset.UtcNow.Date;
-            var tables = await dbContext.Tables.AsNoTracking().ToListAsync(cancellationToken);
+            var tables = await dbContext.Tables.AsNoTracking().Where(t => t.IsActive).ToListAsync(cancellationToken);
             var endedToday = await dbContext.MatchHistories
                 .AsNoTracking()
                 .Where(match => match.EndedAt != null && match.EndedAt >= today)
@@ -694,15 +836,16 @@ public static class BilliardEndpoints
         api.MapGet("/dashboard/top-products", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             var start = DateTimeOffset.UtcNow.Date.AddDays(-7);
-            var items = await dbContext.MatchConsumptions
+            var rows = await dbContext.MatchConsumptions
                 .AsNoTracking()
                 .Where(item => item.CreatedAt >= start)
                 .GroupBy(item => item.ProductNameSnapshot)
-                .Select(group => new TopProductResponse(group.Key, group.Sum(item => item.Quantity), group.Sum(item => item.Total)))
+                .Select(group => new { Name = group.Key, Quantity = group.Sum(item => item.Quantity), Total = group.Sum(item => item.UnitPriceSnapshot * item.Quantity) })
                 .OrderByDescending(group => group.Quantity)
                 .Take(10)
                 .ToListAsync(cancellationToken);
 
+            var items = rows.Select(row => new TopProductResponse(row.Name, row.Quantity, row.Total)).ToArray();
             return Results.Ok(items);
         });
 
@@ -733,6 +876,30 @@ public static class BilliardEndpoints
         match.ConsumptionTotal,
         match.Consumptions.Select(consumption => new ConsumptionAmountResponse(
             consumption.Id, consumption.ProductNameSnapshot, consumption.UnitPriceSnapshot, consumption.Quantity, consumption.Total, consumption.CreatedAt)).ToArray());
+
+    private static async Task<BilliardTable?> FindTableAsync(BilliardDbContext dbContext, string identifier, CancellationToken cancellationToken)
+    {
+        if (Guid.TryParse(identifier, out var id))
+        {
+            return await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+        }
+
+        var code = identifier.Trim().ToUpperInvariant();
+        return await dbContext.Tables.FirstOrDefaultAsync(t => t.Code == code, cancellationToken);
+    }
+
+    private static async Task<string> NextTableCodeAsync(BilliardDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var codes = await dbContext.Tables.AsNoTracking().Select(t => t.Code).ToListAsync(cancellationToken);
+        var used = new HashSet<string>(codes);
+        var n = 1;
+        while (used.Contains($"M{n}"))
+        {
+            n += 1;
+        }
+
+        return $"M{n}";
+    }
 
     private static async Task<decimal> GetGlobalRateAsync(BilliardDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -782,7 +949,7 @@ public static class BilliardEndpoints
 
 #region Request / Response DTOs
 
-public sealed record TableResponse(Guid Id, string Name, string Status, decimal HourlyRate, Guid? ActiveMatchId);
+public sealed record TableResponse(Guid Id, string Name, string Code, string Status, decimal HourlyRate, bool IsActive, Guid? ActiveMatchId);
 public sealed record ProductCategoryResponse(Guid Id, string Name, IReadOnlyCollection<ProductResponse> Products);
 public sealed record ProductResponse(Guid Id, string Name, decimal Price);
 public sealed record DashboardSummaryResponse(int TotalTables, int AvailableTables, int OccupiedTables, decimal SalesToday, decimal SalesByGame, decimal SalesByConsumption);
@@ -802,16 +969,18 @@ public sealed record MatchDetailResponse(
 public sealed record TableDetailResponse(
     Guid Id,
     string Name,
+    string Code,
     string Status,
     decimal HourlyRate,
+    bool IsActive,
     Guid? ActiveMatchId,
     MatchDetailResponse? ActiveMatch);
 
 public sealed record StartSessionRequest(string WhitePlayerName, string YellowPlayerName, GameMode GameMode, Guid? TransactionId, Guid? UserId);
 public sealed record LoginRequest(string? Password);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
-public sealed record CreateTableRequest(string Name, decimal HourlyRate);
-public sealed record UpdateTableRequest(string? Name, decimal HourlyRate);
+public sealed record CreateTableRequest(string Name, decimal HourlyRate, string? Code = null);
+public sealed record UpdateTableRequest(string? Name, decimal HourlyRate, string? Code = null);
 public sealed record UpdateAllRatesRequest(decimal HourlyRate);
 public sealed record ScoreRequest(string PlayerColor, int Delta, Guid? TransactionId, Guid? UserId);
 public sealed record RenamePlayersRequest(string WhitePlayerName, string YellowPlayerName, Guid? TransactionId, Guid? UserId);
@@ -825,7 +994,7 @@ public sealed record ConsumptionAddedResponse(decimal ConsumptionTotal);
 public sealed record FinishSessionResponse(Guid MatchHistoryId, decimal GrandTotal);
 public sealed record RoundResponse(Guid Id, int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName);
 
-public sealed record RoundDetailResponse(int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName, DateTimeOffset EndedAt);
+public sealed record RoundDetailResponse(int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName, DateTimeOffset EndedAt, TimeSpan Duration);
 public sealed record RoundHistoryResponse(int WhiteRounds, int YellowRounds, int CurrentRoundNumber, IReadOnlyCollection<RoundDetailResponse> Rounds);
 
 public sealed record ConsumptionAmountResponse(Guid Id, string ProductName, decimal UnitPrice, int Quantity, decimal Total, DateTimeOffset CreatedAt);

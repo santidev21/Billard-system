@@ -1,17 +1,26 @@
 :root {
   --pa-read-color: #10b981;
   --pa-color: #0F5132;
+  --pa-bright: #22A059;
   --pa-dark: #0B3D26;
+  --wood: #8a5a2b;
+  --felt: #2f7d4f;
   --white-ball: #FFFFFF;
   --yellow-ball: #FACC15;
-  --slate: #1E293B;
-  --slate-light: #2a3a55;
+  --slate: #16231B;
+  --slate-light: #20312A;
   --text-primary: #F1F5F9;
-  --text-muted: #94A3B8;
+  --text-muted: #9DB4A6;
   --danger: #EF4444;
   --radius: 16px;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.spinner-center {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
 }
 
 * {
@@ -22,7 +31,9 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: var(--font);
-  background: var(--slate);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(34, 160, 89, 0.16), transparent 60%),
+    linear-gradient(165deg, #1c2b22, var(--slate) 45%, #101812);
   color: var(--text-primary);
   height: 100%;
 }
@@ -42,9 +53,9 @@ button {
 
 /* Glassmorphism utility */
 .glass {
-  background: rgba(30, 41, 59, 0.65);
+  background: rgba(14, 24, 18, 0.62);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
@@ -63,7 +74,9 @@ button {
   color: var(--text-primary);
 }
 .btn:active { transform: scale(0.96); }
-.btn-primary { background: var(--pa-color); color: #fff; }
-.btn-outline { background: transparent; border: 2px solid var(--pa-color); color: var(--pa-color); }
-.btn-danger { background: var(--danger); color: #fff; }
+.btn-primary { background: linear-gradient(180deg, #238c4e, var(--pa-color)); color: #fff; box-shadow: 0 4px 12px rgba(15, 81, 50, 0.35); }
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-outline { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); color: var(--text-primary); }
+.btn-outline:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.28); }
+.btn-danger { background: linear-gradient(180deg, #ef5350, var(--danger)); color: #fff; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }

@@ -107,7 +107,10 @@ public sealed class MatchHistory : Entity
                 ? YellowPlayerName
                 : null;
 
-        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName);
+        var startedAt = _rounds.Count == 0
+            ? StartedAt
+            : _rounds[^1].EndedAt;
+        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName, startedAt);
         _rounds.Add(round);
 
         WhiteScore = 0;

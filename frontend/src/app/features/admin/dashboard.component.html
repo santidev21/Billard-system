@@ -13,6 +13,7 @@
   @if (showAddTable()) {
     <div class="add-table glass">
       <input [(ngModel)]="newTableName" placeholder="Nombre (ej. Mesa 2)" />
+      <input [(ngModel)]="newTableCode" placeholder="Código corto (ej. M2, opcional)" style="max-width: 180px" />
       <button class="btn btn-primary" (click)="addTable()">Guardar Mesa</button>
       <button class="btn btn-outline" (click)="showAddTable.set(false)">Cancelar</button>
     </div>
@@ -49,14 +50,40 @@
     </div>
   }
 
+  <div class="grid-spinner">
+    @if (loading()) {
+      <div class="loading-panel glass">
+        <app-spinner [label]="'Cargando mesas…'" />
+      </div>
+    }
+  </div>
+
   <div class="grid">
-    @for (table of tables(); track table.id) {
-      <div class="table-card" (click)="openTable(table.id)">
+  @if (!loading() && tables().length === 0) {
+    <div class="empty-state glass">
+      <p>No hay mesas registradas todavía.</p>
+      <button class="btn btn-primary" (click)="showAddTable.set(true)">Crear primera mesa</button>
+    </div>
+  }
+  @for (table of tables(); track table.id) {
+  <div class="table-card" (click)="openTable(table.id)">
         <div class="card-top">
           <span class="dot-c" [class]="statusDot(table.status)"></span>
           <span class="name">{{ table.name }}</span>
-          <span class="status">{{ table.status }}</span>
+          @if (table.code) {
+            <span class="code">{{ table.code }}</span>
+          }
+          <span class="status">{{ statusName(table.status) }}@if (!table.isActive) { · Inhabilitada}</span>
+          @if (table.status === 'Available') {
+            <button class="mini del" title="Eliminar mesa" (click)="$event.stopPropagation(); deleteTable(table.id)">✕</button>
+          }
         </div>
+        @if (!table.isActive) {
+          <div class="empty">
+            <span>Mesa inhabilitada</span>
+            <button class="mini primary" (click)="$event.stopPropagation(); toggleEnabled(table)">Habilitar</button>
+          </div>
+        } @else {
         @let detail = details()[table.id];
         @if (detail) {
           @if (detail.activeMatch; as match) {
@@ -68,20 +95,23 @@
               <div class="line"><span>Tiempo</span><b>${{ fmtMoney(cardTimeCost(detail)) }}</b></div>
               <div class="total">Total: ${{ fmtMoney(cardTotal(detail)) }}</div>
               <div class="action-btns">
-                <button class="mini" (click)="$event.stopPropagation(); triggerWaiter(table.id)">Llamar</button>
-                <button class="mini" (click)="$event.stopPropagation(); triggerCheck(table.id)">Cuenta</button>
+                @if (table.status === 'WaitingForWaiter' || table.status === 'WaitingForCheck') {
+                  <button class="mini primary" (click)="$event.stopPropagation(); attendTable(table.id)">Resolver</button>
+                }
+                <button class="mini" (click)="$event.stopPropagation(); openTable(table.id)">Agregar consumo</button>
                 <button class="mini danger" (click)="$event.stopPropagation(); requestFinish(detail)">Cerrar</button>
               </div>
             </div>
           } @else {
             <div class="empty">
-              <span>Mesa disponible</span>
+              <span>Mesa libre</span>
               <button class="mini primary" (click)="$event.stopPropagation(); openStartForm(table.id)">Iniciar sesión</button>
             </div>
           }
         }
+        }
       </div>
-    }
+  }
   </div>
 
   @if (topProducts().length) {
@@ -97,9 +127,33 @@
     <div class="table-modal overlay" (click)="closeTable()">
       <div class="modal-card glass" (click)="$event.stopPropagation()">
         <header>
-          <h3>{{ t.name }}</h3>
+          <h3>{{ t.name }} @if (t.code) { · <span class="code">{{ t.code }}</span> }</h3>
           <button class="btn btn-outline close" (click)="closeTable()">✕</button>
         </header>
+
+        @if (t.code) {
+          <div class="link-row">
+            <span class="link-lbl">Link para esta mesa</span>
+            <div class="link-copy">
+              <span class="link">/tables/{{ t.code }}</span>
+              <button class="btn btn-outline" (click)="copyLink(t)">Copiar</button>
+            </div>
+          </div>
+        }
+        @if (t.status === 'WaitingForWaiter' || t.status === 'WaitingForCheck') {
+          <button class="btn btn-primary" (click)="attendTable(t.id)">Atender solicitud</button>
+        }
+
+        @if (!t.isActive) {
+          <div class="modal-actions">
+            <button class="btn btn-outline" (click)="toggleEnabled(t)">Habilitar mesa</button>
+          </div>
+        } @else {
+          <div class="modal-actions actions-row">
+            <button class="btn btn-outline" (click)="$event.stopPropagation(); toggleEnabled(t)">Inhabilitar</button>
+            <button class="btn btn-outline danger" (click)="deleteTable(t.id)">Eliminar</button>
+          </div>
+        }
 
         <app-camera-view />
 

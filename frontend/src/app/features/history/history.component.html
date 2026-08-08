@@ -1,6 +1,10 @@
 <section>
   <h2 class="page-title">Historial de Partidas</h2>
 
+  @if (loading()) {
+    <div class="spinner-center"><app-spinner [label]="'Cargando historial…'" /></div>
+  }
+
   <div class="table-wrap glass">
     <table>
       <thead>
@@ -15,7 +19,7 @@
             <td>{{ m.yellowPlayerName }}</td>
             <td>{{ m.whiteScore }} : {{ m.yellowScore }}</td>
             <td>{{ m.totalCarambolas }}</td>
-            <td>{{ m.gameMode }}</td>
+            <td>{{ gameMode(m.gameMode) }}</td>
             <td>{{ duration(m) }}</td>
             <td>${{ fmtMoney(m.grandTotal) }}</td>
           </tr>

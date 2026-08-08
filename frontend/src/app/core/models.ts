@@ -5,8 +5,10 @@ export type PlayerColor = 'white' | 'yellow';
 export interface TableResponse {
   id: string;
   name: string;
+  code: string;
   status: TableStatus;
   hourlyRate: number;
+  isActive: boolean;
   activeMatchId: string | null;
 }
 
@@ -36,8 +38,10 @@ export interface MatchDetail {
 export interface TableDetail {
   id: string;
   name: string;
+  code: string;
   status: TableStatus;
   hourlyRate: number;
+  isActive: boolean;
   activeMatchId: string | null;
   activeMatch: MatchDetail | null;
 }

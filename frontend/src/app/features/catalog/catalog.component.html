@@ -1,10 +1,20 @@
 <section>
   <h2 class="page-title">Catálogo de Productos</h2>
 
+  @if (loading()) {
+    <div class="spinner-center"><app-spinner [label]="'Cargando productos…'" /></div>
+  }
+
   <div class="form glass">
     <input [(ngModel)]="newProductName" placeholder="Nombre del producto" />
     <input [(ngModel)]="newProductPrice" type="number" placeholder="Precio" />
-    <button class="btn btn-primary" (click)="addProduct()" [disabled]="!newProductName.trim() || newProductPrice <= 0">Agregar</button>
+    <button class="btn btn-primary" (click)="addProduct()" [disabled]="loading() || !newProductName.trim() || newProductPrice <= 0">
+      @if (loading()) {
+        <app-spinner [label]="'Guardando…'" />
+      } @else {
+        Agregar
+      }
+    </button>
   </div>
 
   <div class="cats">

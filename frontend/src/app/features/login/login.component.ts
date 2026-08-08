@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SpinnerComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
   standalone: true,
