@@ -1,21 +1,30 @@
+using System.Security.Cryptography;
+using BilliardSystem.Domain.Common;
 using BilliardSystem.Domain.Entities;
 using BilliardSystem.Domain.Enums;
 using BilliardSystem.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using BilliardSystem.API.Hubs;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace BilliardSystem.API.Endpoints;
 
 public static class BilliardEndpoints
 {
+    private static readonly HashSet<string> AllowedSettingKeys =
+    [
+        "HourlyRate",
+        "ReplayBufferSeconds",
+        "BusinessName"
+    ];
+
     public static IEndpointRouteBuilder MapBilliardEndpoints(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("/api");
 
         api.MapGet("/health", () => Results.Ok(new { status = "ok", service = "BilliardSystem.API" }));
+
+        // ── Auth ───────────────────────────────────────────────────────
 
         api.MapPost("/auth/login", async (LoginRequest request, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -30,21 +39,35 @@ public static class BilliardEndpoints
 
             if (adminPassword is null || string.IsNullOrWhiteSpace(adminPassword.Value))
             {
-                dbContext.Settings.Add(new AppSetting("AdminPassword", Hash(request.Password!)));
+                dbContext.Settings.Add(new AppSetting("AdminPassword", PasswordHasher.Hash(request.Password!)));
+                var (session, rawToken) = CreateSession(dbContext);
                 await dbContext.SaveChangesAsync(cancellationToken);
-                return Results.Ok(new { token = Guid.NewGuid().ToString() });
+                return Results.Ok(new { token = rawToken });
             }
 
-            return !string.Equals(adminPassword.Value, Hash(request.Password ?? string.Empty), StringComparison.Ordinal)
-                ? Results.Unauthorized()
-                : Results.Ok(new { token = Guid.NewGuid().ToString() });
-        });
-
-        api.MapPost("/auth/change-password", async (ChangePasswordRequest request, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 4)
+            if (!PasswordHasher.Verify(request.Password ?? string.Empty, adminPassword.Value))
             {
-                return Results.BadRequest(new { message = "La nueva clave debe tener al menos 4 caracteres." });
+                return Results.Unauthorized();
+            }
+
+            if (PasswordHasher.IsLegacyHash(adminPassword.Value))
+            {
+                adminPassword.Update(PasswordHasher.Hash(request.Password!));
+            }
+
+            var (loginSession, loginToken) = CreateSession(dbContext);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Results.Ok(new { token = loginToken });
+        }).RequireRateLimiting("Login");
+
+        api.MapPost("/auth/change-password", async (
+            ChangePasswordRequest request,
+            BilliardDbContext dbContext,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+            {
+                return Results.BadRequest(new { message = "La nueva clave debe tener al menos 8 caracteres." });
             }
 
             var adminPassword = await dbContext.Settings
@@ -52,20 +75,31 @@ public static class BilliardEndpoints
 
             if (adminPassword is null || string.IsNullOrWhiteSpace(adminPassword.Value))
             {
-                dbContext.Settings.Add(new AppSetting("AdminPassword", Hash(request.NewPassword!)));
+                dbContext.Settings.Add(new AppSetting("AdminPassword", PasswordHasher.Hash(request.NewPassword!)));
             }
-            else if (!string.Equals(adminPassword.Value, Hash(request.CurrentPassword ?? string.Empty), StringComparison.Ordinal))
+            else if (!PasswordHasher.Verify(request.CurrentPassword ?? string.Empty, adminPassword.Value))
             {
                 return Results.Json(new { message = "La clave actual no coincide." }, statusCode: StatusCodes.Status401Unauthorized);
             }
             else
             {
-                adminPassword.Update(Hash(request.NewPassword));
+                adminPassword.Update(PasswordHasher.Hash(request.NewPassword));
             }
+
+            // Revoke all existing sessions
+            await dbContext.Sessions.ExecuteDeleteAsync(cancellationToken);
 
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new { ok = true });
-        });
+        }).RequireAuthorization("AdminSession");
+
+        api.MapPost("/auth/logout", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
+        {
+            await dbContext.Sessions.ExecuteDeleteAsync(cancellationToken);
+            return Results.Ok(new { ok = true });
+        }).RequireAuthorization("AdminSession");
+
+        // ── Tables (read-only, player + admin) ────────────────────────
 
         api.MapGet("/tables", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -138,11 +172,18 @@ public static class BilliardEndpoints
                 match is null ? null : ToMatchDetailResponse(match)));
         });
 
+        // ── Tables (write, admin-only) ────────────────────────────────
+
         api.MapPost("/tables", async (CreateTableRequest request, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 80)
             {
-                return Results.BadRequest(new { message = "El nombre de la mesa es obligatorio." });
+                return Results.BadRequest(new { message = "El nombre de la mesa es obligatorio (máx. 80 caracteres)." });
+            }
+
+            if (request.HourlyRate is < 0 or > 1_000_000)
+            {
+                return Results.BadRequest(new { message = "La tarifa debe estar entre 0 y 1.000.000." });
             }
 
             var rate = request.HourlyRate > 0 ? request.HourlyRate : await GetGlobalRateAsync(dbContext, cancellationToken);
@@ -162,7 +203,7 @@ public static class BilliardEndpoints
             dbContext.Tables.Add(table);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPut("/tables/{id}", async (Guid id, UpdateTableRequest request, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -174,6 +215,10 @@ public static class BilliardEndpoints
 
             if (!string.IsNullOrWhiteSpace(request.Name))
             {
+                if (request.Name.Length > 80)
+                {
+                    return Results.BadRequest(new { message = "El nombre no puede exceder 80 caracteres." });
+                }
                 table.Rename(request.Name.Trim());
             }
 
@@ -189,20 +234,20 @@ public static class BilliardEndpoints
                 table.SetCode(request.Code);
             }
 
-            if (request.HourlyRate > 0)
+            if (request.HourlyRate is > 0 and <= 1_000_000)
             {
                 table.SetHourlyRate(request.HourlyRate);
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPut("/tables/rate/all", async (UpdateAllRatesRequest request, BilliardDbContext dbContext, IHubContext<TableHub> hub, CancellationToken cancellationToken) =>
         {
-            if (request.HourlyRate <= 0)
+            if (request.HourlyRate is <= 0 or > 1_000_000)
             {
-                return Results.BadRequest(new { message = "La tarifa debe ser mayor a cero." });
+                return Results.BadRequest(new { message = "La tarifa debe ser mayor a cero y menor a 1.000.000." });
             }
 
             var tables = await dbContext.Tables.ToListAsync(cancellationToken);
@@ -223,9 +268,9 @@ public static class BilliardEndpoints
 
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = (Guid?)null, status = "RateChanged" }, cancellationToken);
+            await hub.Clients.Group("admins").SendAsync("TableStateUpdated", new { tableId = (Guid?)null, status = "RateChanged" }, cancellationToken);
             return Results.Ok(new { updated = tables.Count });
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPost("/tables/{id}/attend", async (
             Guid id,
@@ -243,12 +288,12 @@ public static class BilliardEndpoints
             {
                 table.MarkAttended();
                 await dbContext.SaveChangesAsync(cancellationToken);
-                await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+                await hub.Clients.Group("admins").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
                 await hub.Clients.Group($"table:{id}").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
             }
 
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPost("/tables/{id}/disable", async (
             Guid id,
@@ -269,9 +314,9 @@ public static class BilliardEndpoints
 
             table.Disable();
             await dbContext.SaveChangesAsync(cancellationToken);
-            await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            await hub.Clients.Group("admins").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPost("/tables/{id}/enable", async (
             Guid id,
@@ -287,9 +332,9 @@ public static class BilliardEndpoints
 
             table.Enable();
             await dbContext.SaveChangesAsync(cancellationToken);
-            await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
+            await hub.Clients.Group("admins").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapDelete("/tables/{id}", async (Guid id, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -314,7 +359,9 @@ public static class BilliardEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
             await WriteAuditAsync(dbContext, AuditActionType.TableDeleted, null, id, null, null, $"Se eliminó la mesa '{table.Name}'.", cancellationToken);
             return Results.Ok(new { ok = true });
-        });
+        }).RequireAuthorization("AdminSession");
+
+        // ── Products (read, player + admin) ───────────────────────────
 
         api.MapGet("/products", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -328,14 +375,21 @@ public static class BilliardEndpoints
             return Results.Ok(products);
         });
 
+        // ── Products (write, admin-only) ──────────────────────────────
+
         api.MapPost("/products", async (
             CreateProductRequest request,
             BilliardDbContext dbContext,
             CancellationToken cancellationToken) =>
         {
-            if (string.IsNullOrWhiteSpace(request.Name) || request.Price <= 0)
+            if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 120)
             {
-                return Results.BadRequest(new { message = "El nombre y el precio del producto son obligatorios." });
+                return Results.BadRequest(new { message = "El nombre del producto es obligatorio (máx. 120 caracteres)." });
+            }
+
+            if (request.Price is <= 0 or > 1_000_000)
+            {
+                return Results.BadRequest(new { message = "El precio debe estar entre 1 y 1.000.000." });
             }
 
             var category = await dbContext.Categories
@@ -354,7 +408,7 @@ public static class BilliardEndpoints
             dbContext.Products.Add(product);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new ProductResponse(product.Id, product.Name, product.Price));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPut("/products/{id}", async (
             Guid id,
@@ -368,10 +422,20 @@ public static class BilliardEndpoints
                 return Results.NotFound();
             }
 
-            product.Update(request.Name, request.Price);
+            if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 120)
+            {
+                return Results.BadRequest(new { message = "El nombre es obligatorio (máx. 120 caracteres)." });
+            }
+
+            if (request.Price is <= 0 or > 1_000_000)
+            {
+                return Results.BadRequest(new { message = "El precio debe estar entre 1 y 1.000.000." });
+            }
+
+            product.Update(request.Name.Trim(), request.Price);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok();
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapDelete("/products/{id}", async (Guid id, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -384,22 +448,30 @@ public static class BilliardEndpoints
             product.Deactivate();
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok();
-        });
+        }).RequireAuthorization("AdminSession");
+
+        // ── Settings (admin-only) ─────────────────────────────────────
 
         api.MapGet("/settings", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             var settings = await dbContext.Settings
                 .AsNoTracking()
+                .Where(s => s.Key != "AdminPassword")
                 .OrderBy(setting => setting.Key)
                 .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, cancellationToken);
 
             return Results.Ok(settings);
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapPut("/settings", async (Dictionary<string, string> values, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             foreach (var pair in values)
             {
+                if (!AllowedSettingKeys.Contains(pair.Key))
+                {
+                    continue;
+                }
+
                 var setting = await dbContext.Settings.FirstOrDefaultAsync(s => s.Key == pair.Key, cancellationToken);
                 if (setting is null)
                 {
@@ -413,7 +485,9 @@ public static class BilliardEndpoints
 
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok();
-        });
+        }).RequireAuthorization("AdminSession");
+
+        // ── Player operations (anonymous, kiosk) ──────────────────────
 
         api.MapPost("/tables/{id}/start", async (
             Guid id,
@@ -460,6 +534,14 @@ public static class BilliardEndpoints
             IHubContext<TableHub> hub,
             CancellationToken cancellationToken) =>
         {
+            if (request.Delta is < -5 or > 50)
+            {
+                return Results.BadRequest(new { message = "El puntaje debe estar entre -5 y 50." });
+            }
+
+            var color = request.PlayerColor?.Equals("yellow", StringComparison.OrdinalIgnoreCase) == true
+                ? "yellow" : "white";
+
             if (await IsIdempotentAsync(dbContext, request.TransactionId, cancellationToken))
             {
                 return Results.Ok();
@@ -477,16 +559,16 @@ public static class BilliardEndpoints
                 return Results.NotFound();
             }
 
-            var scoreLog = match.AddScore(request.PlayerColor, request.Delta, request.UserId);
+            var scoreLog = match.AddScore(color, request.Delta, request.UserId);
             dbContext.MatchScoreLogs.Add(scoreLog);
             await dbContext.SaveChangesAsync(cancellationToken);
             await WriteAuditAsync(dbContext, AuditActionType.PlayerScored, request.UserId, table.Id, match.Id, request.TransactionId,
-                $"Carambola {request.PlayerColor} {request.Delta:+0;-0;0} -> {scoreLog.ResultingScore}", cancellationToken);
+                $"Carambola {color} {request.Delta:+0;-0;0} -> {scoreLog.ResultingScore}", cancellationToken);
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
             {
                 tableId = id,
-                playerColor = request.PlayerColor,
+                playerColor = color,
                 delta = request.Delta,
                 newScore = scoreLog.ResultingScore,
                 totalCarambolas = match.TotalCarambolas
@@ -504,6 +586,16 @@ public static class BilliardEndpoints
             IHubContext<TableHub> hub,
             CancellationToken cancellationToken) =>
         {
+            if (string.IsNullOrWhiteSpace(request.WhitePlayerName) || string.IsNullOrWhiteSpace(request.YellowPlayerName))
+            {
+                return Results.BadRequest(new { message = "Los nombres de los jugadores son obligatorios." });
+            }
+
+            if (request.WhitePlayerName.Length > 80 || request.YellowPlayerName.Length > 80)
+            {
+                return Results.BadRequest(new { message = "Los nombres no pueden exceder 80 caracteres." });
+            }
+
             if (await IsIdempotentAsync(dbContext, request.TransactionId, cancellationToken))
             {
                 return Results.Ok();
@@ -521,8 +613,8 @@ public static class BilliardEndpoints
                 return Results.NotFound();
             }
 
-            match.RenamePlayer("white", request.WhitePlayerName);
-            match.RenamePlayer("yellow", request.YellowPlayerName);
+            match.RenamePlayer("white", request.WhitePlayerName.Trim());
+            match.RenamePlayer("yellow", request.YellowPlayerName.Trim());
             await dbContext.SaveChangesAsync(cancellationToken);
             await WriteAuditAsync(dbContext, AuditActionType.PlayerNameChanged, request.UserId, table.Id, match.Id, request.TransactionId,
                 "Nombres de jugadores actualizados", cancellationToken);
@@ -530,8 +622,8 @@ public static class BilliardEndpoints
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerNamesChanged", new
             {
                 tableId = id,
-                whitePlayerName = request.WhitePlayerName,
-                yellowPlayerName = request.YellowPlayerName
+                whitePlayerName = request.WhitePlayerName.Trim(),
+                yellowPlayerName = request.YellowPlayerName.Trim()
             }, cancellationToken);
 
             await hub.Clients.All.SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, cancellationToken);
@@ -546,6 +638,11 @@ public static class BilliardEndpoints
             IHubContext<TableHub> hub,
             CancellationToken cancellationToken) =>
         {
+            if (request.Quantity is < 1 or > 999)
+            {
+                return Results.BadRequest(new { message = "La cantidad debe estar entre 1 y 999." });
+            }
+
             if (await IsIdempotentAsync(dbContext, request.TransactionId, cancellationToken))
             {
                 return Results.Ok();
@@ -605,7 +702,7 @@ public static class BilliardEndpoints
                     "Llamada de mesero", cancellationToken);
             }
 
-            await hub.Clients.All.SendAsync("AdminNotification", new { type = "waiter", tableId = id, tableName = table.Name, timestamp = DateTimeOffset.UtcNow }, cancellationToken);
+            await hub.Clients.Group("admins").SendAsync("AdminNotification", new { type = "waiter", tableId = id, tableName = table.Name, timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return Results.Ok();
         });
 
@@ -637,7 +734,7 @@ public static class BilliardEndpoints
                     "Solicitud de cuenta", cancellationToken);
             }
 
-            await hub.Clients.All.SendAsync("AdminRequest", new { type = "check", tableId = id, tableName = table.Name, total = consumptionTotal, timestamp = DateTimeOffset.UtcNow }, cancellationToken);
+            await hub.Clients.Group("admins").SendAsync("AdminRequest", new { type = "check", tableId = id, tableName = table.Name, total = consumptionTotal, timestamp = DateTimeOffset.UtcNow }, cancellationToken);
             return Results.Ok();
         });
 
@@ -779,6 +876,8 @@ public static class BilliardEndpoints
             return Results.Ok(new RoundHistoryResponse(whiteRounds, yellowRounds, match.RoundNumber, rounds));
         });
 
+        // ── History & Dashboard (admin-only) ──────────────────────────
+
         api.MapGet("/matches", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
             var matches = await dbContext.MatchHistories
@@ -799,7 +898,7 @@ public static class BilliardEndpoints
                 .ToListAsync(cancellationToken);
 
             return Results.Ok(matches);
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapGet("/matches/{id}", async (Guid id, BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -810,7 +909,7 @@ public static class BilliardEndpoints
                 .FirstOrDefaultAsync(history => history.Id == id, cancellationToken);
 
             return match is null ? Results.NotFound() : Results.Ok(ToMatchDetailResponse(match));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapGet("/dashboard/summary", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -831,7 +930,7 @@ public static class BilliardEndpoints
                 SalesToday: salesByGame + salesByConsumption,
                 SalesByGame: salesByGame,
                 SalesByConsumption: salesByConsumption));
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapGet("/dashboard/top-products", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -847,7 +946,7 @@ public static class BilliardEndpoints
 
             var items = rows.Select(row => new TopProductResponse(row.Name, row.Quantity, row.Total)).ToArray();
             return Results.Ok(items);
-        });
+        }).RequireAuthorization("AdminSession");
 
         api.MapGet("/audit/logs", async (BilliardDbContext dbContext, CancellationToken cancellationToken) =>
         {
@@ -859,9 +958,19 @@ public static class BilliardEndpoints
                 .ToListAsync(cancellationToken);
 
             return Results.Ok(logs);
-        });
+        }).RequireAuthorization("AdminSession");
 
         return app;
+    }
+
+    private static (AdminSession session, string rawToken) CreateSession(BilliardDbContext dbContext)
+    {
+        var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        var tokenHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(rawToken)));
+        var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
+        var session = new AdminSession(tokenHash, expiresAt);
+        dbContext.Sessions.Add(session);
+        return (session, rawToken);
     }
 
     private static MatchDetailResponse ToMatchDetailResponse(MatchHistory match) => new(
@@ -939,12 +1048,6 @@ public static class BilliardEndpoints
         dbContext.AuditLogs.Add(new AuditLog(actionType, description, userId, tableId, matchId, transactionId));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
-
-    private static string Hash(string value)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-        return Convert.ToHexString(bytes);
-    }
 }
 
 #region Request / Response DTOs
@@ -989,7 +1092,8 @@ public sealed record CreateProductRequest(string Name, decimal Price);
 public sealed record UpdateProductRequest(string Name, decimal Price);
 public sealed record TableRequest(Guid? TransactionId, Guid? UserId);
 public sealed record FinishSessionRequest(Guid? TransactionId, Guid? ClosedByUserId);
-public sealed record StartSessionResponse(Guid TableId, Guid MatchId);public sealed record ScoreResponse(int NewScore);
+public sealed record StartSessionResponse(Guid TableId, Guid MatchId);
+public sealed record ScoreResponse(int NewScore);
 public sealed record ConsumptionAddedResponse(decimal ConsumptionTotal);
 public sealed record FinishSessionResponse(Guid MatchHistoryId, decimal GrandTotal);
 public sealed record RoundResponse(Guid Id, int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName);

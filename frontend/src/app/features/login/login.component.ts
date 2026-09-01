@@ -27,7 +27,11 @@ export class LoginComponent {
       await this.auth.login(this.password);
       await this.router.navigate(['/admin']);
     } catch (e: any) {
-      this.error.set((e?.error?.message as string) ?? 'Clave incorrecta.');
+      if (e?.status === 429) {
+        this.error.set('Demasiados intentos. Espera un minuto e intenta de nuevo.');
+      } else {
+        this.error.set((e?.error?.message as string) ?? 'Clave incorrecta.');
+      }
       this.loading.set(false);
     }
   }

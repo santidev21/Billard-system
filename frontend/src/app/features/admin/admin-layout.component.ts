@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
 
@@ -15,7 +15,7 @@ import { fmtMoney } from '../../core/format';
   styleUrls: ['./admin-layout.component.css'],
   standalone: true,
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
@@ -36,6 +36,10 @@ export class AdminLayoutComponent {
         this.callPopup.set(n);
       }
     });
+  }
+
+  async ngOnInit(): Promise<void> {
+    await this.signalr.joinAdminGroup();
   }
 
   popupTitle(n: AdminNotification | null): string {
@@ -68,6 +72,8 @@ export class AdminLayoutComponent {
 
 
   async logout(): Promise<void> {
+    await this.api.logout().catch(() => undefined);
+    await this.signalr.leaveAdminGroup();
     this.auth.logout();
     await this.router.navigate(['/play']);
   }
@@ -87,8 +93,8 @@ export class AdminLayoutComponent {
 
   async savePassword(): Promise<void> {
     this.passwordError.set(null);
-    if (this.newPassword.length < 4) {
-      this.passwordError.set('La nueva clave debe tener al menos 4 caracteres.');
+    if (this.newPassword.length < 8) {
+      this.passwordError.set('La nueva clave debe tener al menos 8 caracteres.');
       return;
     }
     if (this.newPassword !== this.confirmPassword) {
@@ -99,6 +105,7 @@ export class AdminLayoutComponent {
     try {
       await this.auth.changePassword(this.currentPassword, this.newPassword);
       this.showChangePassword.set(false);
+      await this.router.navigate(['/login']);
     } catch (e: any) {
       this.passwordError.set((e?.error?.message as string) ?? 'La clave actual no coincide.');
     } finally {

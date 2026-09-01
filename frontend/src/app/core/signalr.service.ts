@@ -1,7 +1,9 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 
-import { ConsumptionAmount, GameMode, TableStatus } from './models';
+import { ConsumptionAmount, TableStatus } from './models';
+
+const TOKEN_KEY = 'billiard-admin-token';
 
 export interface PlayerScoredEvent {
   tableId: string;
@@ -42,6 +44,8 @@ export interface AdminNotification {
 @Injectable({ providedIn: 'root' })
 export class SignalRService {
   private hub?: signalR.HubConnection;
+  private joinedTableId?: string;
+  private adminJoined = false;
   readonly connected = signal(false);
 
   readonly playerScored = signal<PlayerScoredEvent | null>(null);
@@ -57,8 +61,12 @@ export class SignalRService {
       return;
     }
 
+    const token = localStorage.getItem(TOKEN_KEY);
+
     this.hub = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/tables')
+      .withUrl('/hubs/tables', {
+        accessTokenFactory: () => token ?? '',
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .build();
 
@@ -80,9 +88,11 @@ export class SignalRService {
 
     await this.hub.start();
     this.connected.set(true);
+    this.rejoinGroups();
   }
 
   async joinTable(tableId: string): Promise<void> {
+    this.joinedTableId = tableId;
     if (this.hub?.state === signalR.HubConnectionState.Connected) {
       await this.hub.invoke('JoinTableGroup', tableId);
     }
@@ -94,7 +104,27 @@ export class SignalRService {
     }
   }
 
-  private rejoinGroups(): void {
-    // Overridden by components through joinTable calls after reconnect.
+  async joinAdminGroup(): Promise<void> {
+    this.adminJoined = true;
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (this.hub?.state === signalR.HubConnectionState.Connected && token) {
+      await this.hub.invoke('JoinAdminGroup', token);
+    }
+  }
+
+  async leaveAdminGroup(): Promise<void> {
+    this.adminJoined = false;
+    if (this.hub?.state === signalR.HubConnectionState.Connected) {
+      await this.hub.invoke('LeaveAdminGroup');
+    }
+  }
+
+  private async rejoinGroups(): Promise<void> {
+    if (this.joinedTableId && this.hub?.state === signalR.HubConnectionState.Connected) {
+      await this.hub.invoke('JoinTableGroup', this.joinedTableId);
+    }
+    if (this.adminJoined) {
+      await this.joinAdminGroup();
+    }
   }
 }

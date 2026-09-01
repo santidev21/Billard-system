@@ -45,11 +45,6 @@ En este modo, Angular se compila y se integra directamente dentro de la API de A
   "ConnectionStrings": {
     "DefaultConnection": "Data Source=billiard_system.db"
   },
-  "Jwt": {
-    "Secret": "SUPER_SECRET_KEY_BILLIARD_THREE_CUSHION_2026_PRODUCTION",
-    "Issuer": "BilliardSystem",
-    "Audience": "BilliardClients"
-  },
   "Kestrel": {
     "Endpoints": {
       "Http": {

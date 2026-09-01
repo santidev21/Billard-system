@@ -38,6 +38,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductCategory> Categories => Set<ProductCategory>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AdminSession> Sessions => Set<AdminSession>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -173,6 +174,15 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasOne(consumption => consumption.Product)
                 .WithMany()
                 .HasForeignKey(consumption => consumption.ProductId);
+        });
+
+        modelBuilder.Entity<AdminSession>(builder =>
+        {
+            builder.ToTable("Sessions");
+            builder.HasKey(session => session.Id);
+            builder.Property(session => session.TokenHash).HasMaxLength(256).IsRequired();
+            builder.HasIndex(session => session.TokenHash);
+            builder.HasIndex(session => session.ExpiresAt);
         });
 
         Seed(modelBuilder);

@@ -27,6 +27,9 @@ export class ApiService {
       this.http.post<void>(`${this.base}/auth/change-password`, { currentPassword, newPassword })
     );
   }
+  logout(): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/auth/logout`, {}));
+  }
 
   // Tables
   getTables(): Promise<TableResponse[]> {

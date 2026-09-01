@@ -1,0 +1,19 @@
+services:
+  billard:
+    image: ghcr.io/santidev21/billard-system:latest
+    container_name: billard
+    restart: unless-stopped
+    environment:
+      - AllowedHosts=billard.santidev21.tech;localhost
+      - ConnectionStrings__BilliardDatabase=Data Source=/app/data/billiard-system.db
+    volumes:
+      - billard-data:/app/data
+    networks:
+      - billard-net
+
+volumes:
+  billard-data:
+
+networks:
+  billard-net:
+    driver: bridge

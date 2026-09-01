@@ -8,19 +8,24 @@ export class AuthService {
   constructor(private readonly api: ApiService) {}
 
   isAuthenticated(): boolean {
-    return !!sessionStorage.getItem(TOKEN_KEY);
+    return !!localStorage.getItem(TOKEN_KEY);
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
   }
 
   async login(password: string): Promise<void> {
     const res = await this.api.login(password);
-    sessionStorage.setItem(TOKEN_KEY, res.token);
+    localStorage.setItem(TOKEN_KEY, res.token);
   }
 
-  changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    return this.api.changePassword(currentPassword, newPassword);
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.api.changePassword(currentPassword, newPassword);
+    this.logout();
   }
 
   logout(): void {
-    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   }
 }

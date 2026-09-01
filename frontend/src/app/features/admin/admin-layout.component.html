@@ -43,7 +43,7 @@
       <label>Clave actual</label>
       <input [(ngModel)]="currentPassword" type="password" placeholder="Clave actual" autocomplete="current-password" />
       <label>Nueva clave</label>
-      <input [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 4 caracteres)" autocomplete="new-password" />
+      <input [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 8 caracteres)" autocomplete="new-password" />
       <label>Confirmar nueva clave</label>
       <input [(ngModel)]="confirmPassword" type="password" placeholder="Repite la nueva clave" autocomplete="new-password" />
       @if (passwordError(); as e) {

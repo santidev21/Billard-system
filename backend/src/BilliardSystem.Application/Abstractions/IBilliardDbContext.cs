@@ -14,6 +14,7 @@ public interface IBilliardDbContext
     DbSet<Product> Products { get; }
     DbSet<ProductCategory> Categories { get; }
     DbSet<User> Users { get; }
+    DbSet<AdminSession> Sessions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
