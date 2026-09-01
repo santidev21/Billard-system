@@ -16,4 +16,5 @@ volumes:
 
 networks:
   billard-net:
+    name: billard-net
     driver: bridge
