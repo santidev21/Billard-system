@@ -50,6 +50,11 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
         return result;
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Tenant>(builder =>
@@ -203,6 +208,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 
     private static void Seed(ModelBuilder modelBuilder)
     {
+        var seedDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var demoTenant = Guid.Parse("99999999-0000-0000-0000-000000000001");
         var superUser = Guid.Parse("99999999-0000-0000-0000-000000000099");
         var table1 = Guid.Parse("10000000-0000-0000-0000-000000000001");
@@ -210,7 +216,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
         var water = Guid.Parse("30000000-0000-0000-0000-000000000001");
 
         modelBuilder.Entity<Tenant>().HasData(
-            new { Id = demoTenant, Name = "Demo", Slug = "demo", IsActive = true, CreatedAt = DateTimeOffset.UtcNow }
+            new { Id = demoTenant, Name = "Demo", Slug = "demo", IsActive = true, CreatedAt = seedDate }
         );
 
         modelBuilder.Entity<User>().HasData(
@@ -224,7 +230,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
                 TenantId = (Guid?)null,
                 Email = (string?)null,
                 IsActive = true,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = seedDate
             }
         );
 
@@ -241,10 +247,10 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
         );
 
         modelBuilder.Entity<AppSetting>().HasData(
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Key = "ReplayBufferSeconds", Value = "60", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000003"), Key = "AdminPassword", Value = PasswordHasher.Hash("admin"), TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000004"), Key = "HourlyRate", Value = "12000", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow }
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Key = "ReplayBufferSeconds", Value = "60", TenantId = (Guid?)null, UpdatedAt = seedDate },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", TenantId = (Guid?)null, UpdatedAt = seedDate },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000003"), Key = "AdminPassword", Value = PasswordHasher.Hash("admin"), TenantId = (Guid?)null, UpdatedAt = seedDate },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000004"), Key = "HourlyRate", Value = "12000", TenantId = (Guid?)null, UpdatedAt = seedDate }
         );
     }
 }

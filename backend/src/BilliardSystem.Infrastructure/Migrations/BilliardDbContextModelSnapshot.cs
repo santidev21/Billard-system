@@ -99,28 +99,28 @@ namespace BilliardSystem.Infrastructure.Migrations
                         {
                             Id = new Guid("40000000-0000-0000-0000-000000000001"),
                             Key = "ReplayBufferSeconds",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 657, DateTimeKind.Unspecified).AddTicks(1629), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Value = "60"
                         },
                         new
                         {
                             Id = new Guid("40000000-0000-0000-0000-000000000002"),
                             Key = "BusinessName",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 657, DateTimeKind.Unspecified).AddTicks(2247), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Value = "Billar Tres Bandas"
                         },
                         new
                         {
                             Id = new Guid("40000000-0000-0000-0000-000000000003"),
                             Key = "AdminPassword",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 669, DateTimeKind.Unspecified).AddTicks(3716), new TimeSpan(0, 0, 0, 0, 0)),
-                            Value = "v2.dwAuCq/5aF7PTShEUNZVoXktWULWOvWAp1kpkz9juxk=.1rKr81sRgnjkXBx844NoXDCPL6DulLvVyiZmAWNfiN0="
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "v2.6Ic/mVDcKgJozbBnxmNsctzYo+3+t1wFk+0rLuOwaSE=.HdcEzj4d659rJtH/WYI4xpMBL1BaghohWXPZ9udbQT0="
                         },
                         new
                         {
                             Id = new Guid("40000000-0000-0000-0000-000000000004"),
                             Key = "HourlyRate",
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 669, DateTimeKind.Unspecified).AddTicks(3739), new TimeSpan(0, 0, 0, 0, 0)),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Value = "12000"
                         });
                 });
@@ -554,7 +554,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("99999999-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 640, DateTimeKind.Unspecified).AddTicks(9143), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             Name = "Demo",
                             Slug = "demo"
@@ -612,10 +612,10 @@ namespace BilliardSystem.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("99999999-0000-0000-0000-000000000099"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 656, DateTimeKind.Unspecified).AddTicks(6865), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Super Admin",
                             IsActive = true,
-                            PasswordHash = "v2.Lxi2bjUAHkHs/R/tSdyww7Fmq1N6JNQhRQL0xcwCftY=.P5bdrZsJNoydnPJQ3xu/lK5kj7SORIkCVC3uxbsLqx8=",
+                            PasswordHash = "v2.7dUT8Un51BdH5+EwdZHvhIUXdQSVOomUAXs/RqvTzKQ=.DyxhL/7jStpGonBleM1UcUC24STymAb7PWPPbaJLBIg=",
                             Role = "SuperAdmin",
                             UserName = "superadmin"
                         });

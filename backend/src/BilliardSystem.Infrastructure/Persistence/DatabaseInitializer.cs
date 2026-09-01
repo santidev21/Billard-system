@@ -39,8 +39,6 @@ public static class DatabaseInitializer
 
     private static async Task SeedDemoTenantAsync(BilliardDbContext dbContext)
     {
-        var demoTenantId = Guid.Parse("99999999-0000-0000-0000-000000000001");
-
         if (await dbContext.Tenants.AnyAsync(t => t.Slug == "demo"))
         {
             return;

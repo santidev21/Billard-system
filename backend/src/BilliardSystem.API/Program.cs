@@ -13,7 +13,6 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var conn = builder.Configuration.GetConnectionString("BilliardDatabase");
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.ConfigureHttpJsonOptions(options =>

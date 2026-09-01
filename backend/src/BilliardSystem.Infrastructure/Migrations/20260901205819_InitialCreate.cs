@@ -348,21 +348,21 @@ namespace BilliardSystem.Infrastructure.Migrations
                 columns: new[] { "Id", "Key", "TenantId", "UpdatedAt", "Value" },
                 values: new object[,]
                 {
-                    { new Guid("40000000-0000-0000-0000-000000000001"), "ReplayBufferSeconds", null, new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 657, DateTimeKind.Unspecified).AddTicks(1629), new TimeSpan(0, 0, 0, 0, 0)), "60" },
-                    { new Guid("40000000-0000-0000-0000-000000000002"), "BusinessName", null, new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 657, DateTimeKind.Unspecified).AddTicks(2247), new TimeSpan(0, 0, 0, 0, 0)), "Billar Tres Bandas" },
-                    { new Guid("40000000-0000-0000-0000-000000000003"), "AdminPassword", null, new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 669, DateTimeKind.Unspecified).AddTicks(3716), new TimeSpan(0, 0, 0, 0, 0)), "v2.dwAuCq/5aF7PTShEUNZVoXktWULWOvWAp1kpkz9juxk=.1rKr81sRgnjkXBx844NoXDCPL6DulLvVyiZmAWNfiN0=" },
-                    { new Guid("40000000-0000-0000-0000-000000000004"), "HourlyRate", null, new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 669, DateTimeKind.Unspecified).AddTicks(3739), new TimeSpan(0, 0, 0, 0, 0)), "12000" }
+                    { new Guid("40000000-0000-0000-0000-000000000001"), "ReplayBufferSeconds", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "60" },
+                    { new Guid("40000000-0000-0000-0000-000000000002"), "BusinessName", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Billar Tres Bandas" },
+                    { new Guid("40000000-0000-0000-0000-000000000003"), "AdminPassword", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "v2.6Ic/mVDcKgJozbBnxmNsctzYo+3+t1wFk+0rLuOwaSE=.HdcEzj4d659rJtH/WYI4xpMBL1BaghohWXPZ9udbQT0=" },
+                    { new Guid("40000000-0000-0000-0000-000000000004"), "HourlyRate", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "12000" }
                 });
 
             migrationBuilder.InsertData(
                 table: "Tenants",
                 columns: new[] { "Id", "CreatedAt", "IsActive", "Name", "Slug" },
-                values: new object[] { new Guid("99999999-0000-0000-0000-000000000001"), new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 640, DateTimeKind.Unspecified).AddTicks(9143), new TimeSpan(0, 0, 0, 0, 0)), true, "Demo", "demo" });
+                values: new object[] { new Guid("99999999-0000-0000-0000-000000000001"), new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), true, "Demo", "demo" });
 
             migrationBuilder.InsertData(
                 table: "Users",
                 columns: new[] { "Id", "CreatedAt", "DisplayName", "Email", "IsActive", "PasswordHash", "Role", "TenantId", "UserName" },
-                values: new object[] { new Guid("99999999-0000-0000-0000-000000000099"), new DateTimeOffset(new DateTime(2026, 9, 1, 20, 10, 53, 656, DateTimeKind.Unspecified).AddTicks(6865), new TimeSpan(0, 0, 0, 0, 0)), "Super Admin", null, true, "v2.Lxi2bjUAHkHs/R/tSdyww7Fmq1N6JNQhRQL0xcwCftY=.P5bdrZsJNoydnPJQ3xu/lK5kj7SORIkCVC3uxbsLqx8=", "SuperAdmin", null, "superadmin" });
+                values: new object[] { new Guid("99999999-0000-0000-0000-000000000099"), new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Super Admin", null, true, "v2.7dUT8Un51BdH5+EwdZHvhIUXdQSVOomUAXs/RqvTzKQ=.DyxhL/7jStpGonBleM1UcUC24STymAb7PWPPbaJLBIg=", "SuperAdmin", null, "superadmin" });
 
             migrationBuilder.InsertData(
                 table: "Categories",
