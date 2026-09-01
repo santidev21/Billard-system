@@ -108,7 +108,7 @@ See [deploy/DEPLOY.md](deploy/DEPLOY.md) for the full VPS setup guide.
 docker compose up -d billard
 
 # Connect to reverse proxy
-docker network connect billard-net splitit-proxy
+docker network connect billard-net gateway
 ```
 
 ## Project Structure

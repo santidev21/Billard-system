@@ -12,7 +12,7 @@ cd billard
 sudo docker compose up -d billard
 
 # 3. Connect gateway to the billard network
-sudo docker network connect billard-net splitit-proxy
+sudo docker network connect billard-net gateway
 
 # 4. Get SSL certificate (Let's Encrypt via gateway webroot)
 sudo certbot certonly \
@@ -31,8 +31,8 @@ sudo cp /opt/gateway/sites-available/billard.santidev21.tech.conf \
   /opt/gateway/sites-enabled/
 
 # 6. Validate and reload
-docker exec splitit-proxy nginx -t
-docker exec splitit-proxy nginx -s reload
+docker exec gateway nginx -t
+docker exec gateway nginx -s reload
 
 # 7. Verify (and that existing sites still work)
 curl -I https://billard.santidev21.tech/
@@ -71,5 +71,5 @@ sudo docker compose up -d billard
 ```bash
 # Disable the site
 sudo rm /opt/gateway/sites-enabled/billard.santidev21.tech.conf
-docker exec splitit-proxy nginx -s reload
+docker exec gateway nginx -s reload
 ```
