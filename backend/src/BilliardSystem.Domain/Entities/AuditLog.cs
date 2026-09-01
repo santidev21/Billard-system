@@ -9,7 +9,7 @@ public sealed class AuditLog : Entity
     {
     }
 
-    public AuditLog(AuditActionType actionType, string description, Guid? userId, Guid? tableId, Guid? matchId, Guid? transactionId)
+    public AuditLog(AuditActionType actionType, string description, Guid? userId, Guid? tableId, Guid? matchId, Guid? transactionId, Guid? tenantId = null)
     {
         ActionType = actionType;
         Description = description;
@@ -17,6 +17,7 @@ public sealed class AuditLog : Entity
         TableId = tableId;
         MatchId = matchId;
         TransactionId = transactionId;
+        TenantId = tenantId;
     }
 
     public AuditActionType ActionType { get; private set; }
@@ -25,5 +26,7 @@ public sealed class AuditLog : Entity
     public Guid? TableId { get; private set; }
     public Guid? MatchId { get; private set; }
     public Guid? TransactionId { get; private set; }
+    public Guid? TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
 }

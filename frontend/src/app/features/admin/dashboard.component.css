@@ -135,4 +135,11 @@
 
 @media (max-width: 640px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }
+  .grid { grid-template-columns: 1fr; }
+  .dash-top { flex-direction: column; align-items: flex-start; }
+  .add-table { flex-direction: column; }
+  .add-table input { min-width: unset; }
+  .rate-card { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .top-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .modal-card { width: 100%; max-height: 95vh; margin: 0; }
 }

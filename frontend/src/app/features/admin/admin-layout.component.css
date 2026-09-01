@@ -1,5 +1,5 @@
 .admin-layout { display: flex; flex-direction: column; gap: 1rem; flex: 1; min-height: 0; }
-.admin-head { display: flex; align-items: center; justify-content: space-between; }
+.admin-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .admin-head h2 { margin: 0; font-size: 1.5rem; }
 .admin-nav { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .admin-nav a {
@@ -13,8 +13,24 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .admin-nav a.active, .admin-nav a:hover { background: var(--pa-color); color: #fff; }
-.admin-body { flex: 1; min-height: 0; overflow: auto; }
+.admin-body { flex: 1; min-height: 0; overflow-y: auto; }
+.admin-head-left { display: flex; align-items: center; gap: 0.75rem; }
+.tenant-badge {
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(16,185,129,0.15);
+  color: #34D399;
+}
 .admin-head-actions { display: flex; gap: 0.5rem; }
+@media (max-width: 640px) {
+  .admin-head { flex-direction: column; align-items: flex-start; }
+  .admin-head-actions { width: 100%; }
+  .admin-head-actions .btn { flex: 1; font-size: 0.85rem; padding: 0.5rem 0.7rem; }
+  .admin-nav { overflow-x: auto; flex-wrap: nowrap; width: 100%; }
+  .admin-nav a { white-space: nowrap; font-size: 0.85rem; padding: 0.45rem 0.8rem; }
+}
 .overlay {
   position: fixed;
   inset: 0;

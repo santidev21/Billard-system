@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BilliardSystem.API.Auth;
@@ -5,22 +6,14 @@ using BilliardSystem.API.Endpoints;
 using BilliardSystem.API.Hubs;
 using BilliardSystem.Infrastructure;
 using BilliardSystem.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var conn = builder.Configuration.GetConnectionString("BilliardDatabase");
-if (conn is not null && conn.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
-{
-    var file = conn["Data Source=".Length..].Trim();
-    if (!Path.IsPathRooted(file) && !string.Equals(file, ":memory:", StringComparison.OrdinalIgnoreCase))
-    {
-        var absolute = Path.Combine(builder.Environment.ContentRootPath, file);
-        builder.Configuration["ConnectionStrings:BilliardDatabase"] = $"Data Source={absolute}";
-    }
-}
-
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -29,9 +22,42 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddAuthentication("AdminSession")
-    .AddScheme<AdminAuthOptions, AdminAuthHandler>("AdminSession", _ => { });
-builder.Services.AddAuthorization();
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "dev-only-change-in-production-use-openssl-rand-base64-48";
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminSession", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("SuperAdmin", policy => policy.RequireAuthenticatedUser().RequireClaim("role", "SuperAdmin"));
+});
 
 builder.Services.AddRateLimiter(options =>
 {

@@ -30,7 +30,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private readonly queue = inject(OfflineQueueService);
   private readonly route = inject(ActivatedRoute);
 
-  readonly gameMode = signal<GameMode>('Managed');
+  readonly gameMode = signal<GameMode>('FreeMode');
   readonly blockedMsg = signal<string | null>(null);
   readonly loading = signal(false);
   readonly showEnded = signal(false);
@@ -100,33 +100,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private tickTimer: ReturnType<typeof setInterval> | undefined;
   private pollTimer: ReturnType<typeof setInterval> | undefined;
+  private slug = '';
 
   constructor(
     private readonly router: Router
   ) {}
 
   async ngOnInit(): Promise<void> {
-    this.route.params.subscribe(async (params) => {
-      this.loading.set(true);
-      const id = params['id'];
-      this.tableId.set(id ?? '');
-      // /tables/:id siempre es modo administrado; /play sin id es modo libre.
-      this.gameMode.set(id ? 'Managed' : 'FreeMode');
-
-      if (id) {
-        await this.resolveAndSetTable(id);
-        if (this.tableId()) {
-          await this.signalr.joinTable(this.tableId());
-        }
-      } else {
-        await this.autoSelectTable();
-      }
-      this.loading.set(false);
-
-      this.startPolling();
-    });
-    await this.loadProducts();
-
     effect(() => {
       this.signalr.tableStateUpdated();
       if (this.tableId()) {
@@ -175,6 +155,35 @@ export class PlayerComponent implements OnInit, OnDestroy {
         void this.refreshFromServer();
       }
     });
+
+    this.route.params.subscribe(async (params) => {
+      this.loading.set(true);
+      const slug = params['slug'];
+      const id = params['id'];
+
+      if (slug) {
+        this.slug = slug;
+        this.tableId.set(id ?? '');
+        this.gameMode.set(id ? 'Managed' : 'FreeMode');
+        if (id) {
+          await this.resolveAndSetTable(slug, id);
+          if (this.tableId()) {
+            await this.signalr.joinTable(this.tableId());
+          }
+        } else {
+          await this.autoSelectTable(slug);
+        }
+      } else {
+        this.slug = 'demo';
+        this.tableId.set('');
+        this.gameMode.set('FreeMode');
+        await this.autoSelectTable('demo');
+      }
+
+      this.loading.set(false);
+      this.startPolling();
+    });
+    await this.loadProducts();
   }
 
   closeEnded(): void {
@@ -183,14 +192,18 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   private async refreshFromServer(): Promise<void> {
-    if (!this.tableId()) {
+    if (!this.tableId() || !this.slug) {
       return;
     }
     try {
-      const detail = await this.api.getTable(this.tableId());
+      const detail = await this.api.getTenantTable(this.slug, this.tableId());
       if (detail.activeMatch) {
         this.applyDetail(detail);
       } else if (this.running() && this.startedAt()) {
+        const elapsedMs = Date.now() - this.startedAt()!;
+        if (elapsedMs < 5000) {
+          return;
+        }
         this.endedSummary.set({
           time: this.elapsed(),
           consumptionTotal: this.consumptionTotal(),
@@ -212,9 +225,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async resolveAndSetTable(identifier: string): Promise<void> {
+  private async resolveAndSetTable(slug: string, identifier: string): Promise<void> {
     try {
-      const detail = await this.api.getTable(identifier);
+      const detail = await this.api.getTenantTable(slug, identifier);
       this.tableId.set(detail.id);
       this.tableName.set(detail.name);
       this.hourlyRate.set(String(detail.hourlyRate));
@@ -226,14 +239,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async autoSelectTable(): Promise<void> {
+  private async autoSelectTable(slug: string): Promise<void> {
     try {
-      const tables = await this.api.getTables();
+      const tables = await this.api.getTenantTables(slug);
       const pick = tables.find((t) => t.status === 'Available' && t.isActive) ?? tables.find((t) => t.isActive) ?? tables[0];
       if (pick) {
         this.tableId.set(pick.id);
         this.tableName.set(pick.name);
-        await this.loadTable(pick.id);
+        this.hourlyRate.set(String(pick.hourlyRate));
+        localStorage.setItem('tableName', pick.name);
+        localStorage.setItem('defaultRate', String(pick.hourlyRate));
         await this.signalr.joinTable(pick.id);
       }
     } catch {
@@ -243,7 +258,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   private async loadProducts(): Promise<void> {
     try {
-      this.products.set(await this.api.getProducts());
+      if (this.slug) {
+        this.products.set(await this.api.getTenantProducts(this.slug));
+      } else {
+        this.products.set(await this.api.getProducts());
+      }
     } catch {
       // offline
     }
@@ -255,19 +274,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
-    }
-  }
-
-  private async loadTable(id: string): Promise<void> {
-    try {
-      const detail = await this.api.getTable(id);
-      this.tableName.set(detail.name);
-      this.hourlyRate.set(String(detail.hourlyRate));
-      localStorage.setItem('tableName', detail.name);
-      localStorage.setItem('defaultRate', String(detail.hourlyRate));
-      this.applyDetail(detail);
-    } catch {
-      // offline: rely on cached defaults
     }
   }
 
@@ -318,8 +324,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   saveNames(): void {
     this.whiteName.set(this.whiteInput.trim() || 'Jugador 1');
     this.yellowName.set(this.yellowInput.trim() || 'Jugador 2');
-    if (navigator.onLine) {
-      this.api.renamePlayers(this.tableId(), this.whiteName(), this.yellowName(), this.genTx()).catch(() => undefined);
+    if (navigator.onLine && this.slug) {
+      this.api.renamePlayers(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.genTx()).catch(() => undefined);
     }
   }
 
@@ -333,18 +339,18 @@ export class PlayerComponent implements OnInit, OnDestroy {
     } else {
       this.yellowName.set(value);
     }
-    if (navigator.onLine) {
+    if (navigator.onLine && this.slug) {
       await this.api
-        .renamePlayers(this.tableId(), this.whiteName(), this.yellowName(), this.genTx())
+        .renamePlayers(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.genTx())
         .catch(() => undefined);
     }
   }
 
   async finishRound(): Promise<void> {
     const tx = this.genTx();
-    if (navigator.onLine) {
+    if (navigator.onLine && this.slug) {
       try {
-        const r = await this.api.finishRound(this.tableId(), tx);
+        const r = await this.api.finishRound(this.slug, this.tableId(), tx);
         this.roundNumber.set(r.roundNumber);
         this.lastRound.set(r.winnerName ? `Ronda ${r.roundNumber}: gana ${r.winnerName}` : `Ronda ${r.roundNumber}: empate`);
         setTimeout(() => this.lastRound.set(null), 4000);
@@ -359,8 +365,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   async showRoundHistory(): Promise<void> {
+    if (!this.slug) {
+      return;
+    }
     try {
-      const data = await this.api.getRounds(this.tableId());
+      const data = await this.api.getRounds(this.slug, this.tableId());
       this.rounds.set(data);
       this.showRounds.set(true);
     } catch {
@@ -406,18 +415,27 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.yellowScore.set(resulting);
     }
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !this.slug) {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', tableId: this.tableId(), payload: { playerColor: color, delta } });
       return;
     }
     try {
-      await this.api.score(this.tableId(), color, delta, tx);
+      await this.api.score(this.slug, this.tableId(), color, delta, tx);
     } catch {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', tableId: this.tableId(), payload: { playerColor: color, delta } });
     }
   }
 
   async startSession(): Promise<void> {
+    if (!this.tableId()) {
+      await this.autoSelectTable(this.slug);
+      if (!this.tableId()) {
+        this.blockedMsg.set('No hay mesa disponible. Esperá a que el mesero asigne una.');
+        setTimeout(() => this.blockedMsg.set(null), 4000);
+        return;
+      }
+    }
+
     const tx = this.genTx();
     this.saveNames();
     this.whiteScore.set(0);
@@ -429,12 +447,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.startTimer();
 
     const payload = { whitePlayerName: this.whiteName(), yellowPlayerName: this.yellowName(), gameMode: this.gameMode() };
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !this.slug) {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', tableId: this.tableId(), payload });
       return;
     }
     try {
-      await this.api.startSession(this.tableId(), this.whiteName(), this.yellowName(), this.gameMode(), tx);
+      await this.api.startSession(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.gameMode(), tx);
     } catch {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', tableId: this.tableId(), payload });
     }
@@ -442,16 +460,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   async callWaiter(): Promise<void> {
     this.requestSent.set('waiter');
-    if (navigator.onLine) {
-      await this.api.callWaiter(this.tableId()).catch(() => undefined);
+    if (navigator.onLine && this.slug) {
+      await this.api.callWaiter(this.slug, this.tableId()).catch(() => undefined);
     }
     setTimeout(() => this.requestSent.set(null), 2500);
   }
 
   async requestCheck(): Promise<void> {
     this.requestSent.set('check');
-    if (navigator.onLine) {
-      await this.api.requestCheck(this.tableId()).catch(() => undefined);
+    if (navigator.onLine && this.slug) {
+      await this.api.requestCheck(this.slug, this.tableId()).catch(() => undefined);
     }
     setTimeout(() => this.requestSent.set(null), 2500);
   }
@@ -465,12 +483,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.consumptions.update((list) => [...list, { id: crypto.randomUUID(), name: product.name, qty: 1, total: product.price, at: new Date().toISOString() }]);
     this.consumptionTotal.update((t) => t + product.price);
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !this.slug) {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', tableId: this.tableId(), payload: { productId, quantity: 1 } });
       return;
     }
     try {
-      await this.api.addConsumption(this.tableId(), productId, 1, tx);
+      await this.api.addConsumption(this.slug, this.tableId(), productId, 1, tx);
     } catch {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', tableId: this.tableId(), payload: { productId, quantity: 1 } });
     }
@@ -487,9 +505,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   async finishConfirmed(): Promise<void> {
     this.showConfirm.set(false);
     const tx = this.genTx();
-    if (navigator.onLine) {
+    if (navigator.onLine && this.slug) {
       try {
-        await this.api.finishSession(this.tableId(), tx);
+        await this.api.finishSession(this.slug, this.tableId(), tx);
       } catch {
         await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', tableId: this.tableId(), payload: {} });
       }
@@ -517,7 +535,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.yellowName.set('Jugador 2');
     this.whiteInput = 'Jugador 1';
     this.yellowInput = 'Jugador 2';
-    if (this.tableId()) {
+    if (this.slug) {
+      this.router.navigate([`/t/${this.slug}/play`]);
+    } else {
       this.router.navigate(['/play']);
     }
   }

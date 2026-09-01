@@ -10,15 +10,21 @@ public sealed class AdminSession : Entity
     {
     }
 
-    public AdminSession(string tokenHash, DateTimeOffset expiresAt)
+    public AdminSession(string tokenHash, DateTimeOffset expiresAt, Guid userId, Guid? tenantId)
     {
         TokenHash = tokenHash;
         ExpiresAt = expiresAt;
+        UserId = userId;
+        TenantId = tenantId;
         CreatedAt = DateTimeOffset.UtcNow;
         LastUsedAt = DateTimeOffset.UtcNow;
     }
 
     public string TokenHash { get; private set; } = string.Empty;
+    public Guid UserId { get; private set; }
+    public User? User { get; private set; }
+    public Guid? TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
     public DateTimeOffset ExpiresAt { get; private set; }
     public DateTimeOffset LastUsedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }

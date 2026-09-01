@@ -99,3 +99,36 @@ export interface TableLiveState {
   detail: TableDetail | null;
   lastUpdate: number;
 }
+
+export interface UserInfo {
+  name: string;
+  role: string;
+  tenantName: string | null;
+  tenantSlug: string | null;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  userName: string;
+  role: string;
+  tenantName: string | null;
+  tenantSlug: string | null;
+}
+
+export interface LocalInfo {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  tableCount: number;
+  userCount: number;
+}
+
+export interface RecoveryCode {
+  id: string;
+  tenantName: string;
+  userName: string;
+  createdAt: string;
+  expiresAt: string;
+}

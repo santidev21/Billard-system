@@ -3,20 +3,8 @@ using BilliardSystem.Domain.Common;
 using BilliardSystem.Domain.Entities;
 using BilliardSystem.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BilliardSystem.Infrastructure.Persistence;
-
-public sealed class DateTimeOffsetToTicksConverter : ValueConverter<DateTimeOffset, long>
-{
-    public DateTimeOffsetToTicksConverter()
-        : base(
-            value => value.UtcTicks,
-            value => new DateTimeOffset(value, TimeSpan.Zero))
-    {
-    }
-}
 
 public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 {
@@ -39,6 +27,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
     public DbSet<ProductCategory> Categories => Set<ProductCategory>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AdminSession> Sessions => Set<AdminSession>();
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<RecoveryRequest> RecoveryRequests => Set<RecoveryRequest>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -62,7 +52,14 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        ConfigureDateTimeOffsetAsTicks(modelBuilder);
+        modelBuilder.Entity<Tenant>(builder =>
+        {
+            builder.ToTable("Tenants");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.Name).HasMaxLength(120).IsRequired();
+            builder.Property(t => t.Slug).HasMaxLength(120).IsRequired();
+            builder.HasIndex(t => t.Slug).IsUnique();
+        });
 
         modelBuilder.Entity<BilliardTable>(builder =>
         {
@@ -70,9 +67,10 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(table => table.Id);
             builder.Property(table => table.Name).HasMaxLength(80).IsRequired();
             builder.Property(table => table.Code).HasMaxLength(20).IsRequired();
-            builder.HasIndex(table => table.Code).IsUnique();
+            builder.HasIndex(table => new { table.TenantId, table.Code }).IsUnique();
             builder.Property(table => table.HourlyRate).HasPrecision(10, 2);
             builder.Property(table => table.Status).HasConversion<string>().HasMaxLength(40);
+            builder.HasOne(table => table.Tenant).WithMany().HasForeignKey(table => table.TenantId);
         });
 
         modelBuilder.Entity<User>(builder =>
@@ -81,9 +79,32 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(user => user.Id);
             builder.Property(user => user.DisplayName).HasMaxLength(120).IsRequired();
             builder.Property(user => user.UserName).HasMaxLength(80).IsRequired();
-            builder.HasIndex(user => user.UserName).IsUnique();
+            builder.HasIndex(user => new { user.TenantId, user.UserName }).IsUnique().HasFilter("[TenantId] IS NOT NULL");
             builder.Property(user => user.PasswordHash).HasMaxLength(256).IsRequired();
             builder.Property(user => user.Role).HasConversion<string>().HasMaxLength(40);
+            builder.Property(user => user.Email).HasMaxLength(200);
+            builder.HasOne(user => user.Tenant).WithMany().HasForeignKey(user => user.TenantId);
+        });
+
+        modelBuilder.Entity<AdminSession>(builder =>
+        {
+            builder.ToTable("Sessions");
+            builder.HasKey(session => session.Id);
+            builder.Property(session => session.TokenHash).HasMaxLength(256).IsRequired();
+            builder.HasIndex(session => session.TokenHash);
+            builder.HasIndex(session => session.ExpiresAt);
+            builder.HasOne(session => session.User).WithMany().HasForeignKey(session => session.UserId);
+            builder.HasOne(session => session.Tenant).WithMany().HasForeignKey(session => session.TenantId);
+        });
+
+        modelBuilder.Entity<RecoveryRequest>(builder =>
+        {
+            builder.ToTable("RecoveryRequests");
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.CodeHash).HasMaxLength(256).IsRequired();
+            builder.HasIndex(r => r.TenantId);
+            builder.HasOne(r => r.Tenant).WithMany().HasForeignKey(r => r.TenantId);
+            builder.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId);
         });
 
         modelBuilder.Entity<AuditLog>(builder =>
@@ -94,6 +115,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.Property(log => log.Description).HasMaxLength(500).IsRequired();
             builder.HasIndex(log => log.CreatedAt);
             builder.HasIndex(log => log.TransactionId).IsUnique().HasFilter("[TransactionId] IS NOT NULL");
+            builder.HasOne(log => log.Tenant).WithMany().HasForeignKey(log => log.TenantId);
         });
 
         modelBuilder.Entity<AppSetting>(builder =>
@@ -102,7 +124,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(setting => setting.Id);
             builder.Property(setting => setting.Key).HasMaxLength(120).IsRequired();
             builder.Property(setting => setting.Value).HasMaxLength(1000).IsRequired();
-            builder.HasIndex(setting => setting.Key).IsUnique();
+            builder.HasIndex(setting => new { setting.TenantId, setting.Key }).IsUnique().HasFilter("[TenantId] IS NOT NULL");
+            builder.HasOne(setting => setting.Tenant).WithMany().HasForeignKey(setting => setting.TenantId);
         });
 
         modelBuilder.Entity<ProductCategory>(builder =>
@@ -113,6 +136,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasMany(category => category.Products)
                 .WithOne(product => product.Category)
                 .HasForeignKey(product => product.CategoryId);
+            builder.HasOne(category => category.Tenant).WithMany().HasForeignKey(category => category.TenantId);
         });
 
         modelBuilder.Entity<Product>(builder =>
@@ -121,6 +145,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(product => product.Id);
             builder.Property(product => product.Name).HasMaxLength(120).IsRequired();
             builder.Property(product => product.Price).HasPrecision(10, 2);
+            builder.HasOne(product => product.Tenant).WithMany().HasForeignKey(product => product.TenantId);
         });
 
         modelBuilder.Entity<MatchHistory>(builder =>
@@ -134,9 +159,8 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.Property(match => match.ConsumptionTotal).HasPrecision(10, 2);
             builder.Property(match => match.GrandTotal).HasPrecision(10, 2);
             builder.Property(match => match.SystemVersion).HasMaxLength(40).IsRequired();
-            builder.HasOne(match => match.Table)
-                .WithMany()
-                .HasForeignKey(match => match.TableId);
+            builder.HasOne(match => match.Table).WithMany().HasForeignKey(match => match.TableId);
+            builder.HasOne(match => match.Tenant).WithMany().HasForeignKey(match => match.TenantId);
             builder.Navigation(match => match.ScoreLogs).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(match => match.Consumptions).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(match => match.Rounds).UsePropertyAccessMode(PropertyAccessMode.Field);
@@ -171,58 +195,56 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasOne(consumption => consumption.MatchHistory)
                 .WithMany(match => match.Consumptions)
                 .HasForeignKey(consumption => consumption.MatchHistoryId);
-            builder.HasOne(consumption => consumption.Product)
-                .WithMany()
-                .HasForeignKey(consumption => consumption.ProductId);
-        });
-
-        modelBuilder.Entity<AdminSession>(builder =>
-        {
-            builder.ToTable("Sessions");
-            builder.HasKey(session => session.Id);
-            builder.Property(session => session.TokenHash).HasMaxLength(256).IsRequired();
-            builder.HasIndex(session => session.TokenHash);
-            builder.HasIndex(session => session.ExpiresAt);
+            builder.HasOne(consumption => consumption.Product).WithMany().HasForeignKey(consumption => consumption.ProductId);
         });
 
         Seed(modelBuilder);
     }
 
-    private static void ConfigureDateTimeOffsetAsTicks(ModelBuilder modelBuilder)
-    {
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            foreach (var property in entityType.GetProperties())
-            {
-                if (property.ClrType == typeof(DateTimeOffset) || property.ClrType == typeof(DateTimeOffset?))
-                {
-                    var nullable = property.ClrType == typeof(DateTimeOffset?);
-                    var converterType = typeof(DateTimeOffsetToTicksConverter);
-                    property.SetValueConverter((ValueConverter)Activator.CreateInstance(converterType)!);
-                }
-            }
-        }
-    }
-
     private static void Seed(ModelBuilder modelBuilder)
     {
+        var demoTenant = Guid.Parse("99999999-0000-0000-0000-000000000001");
+        var superUser = Guid.Parse("99999999-0000-0000-0000-000000000099");
         var table1 = Guid.Parse("10000000-0000-0000-0000-000000000001");
         var drinks = Guid.Parse("20000000-0000-0000-0000-000000000001");
         var water = Guid.Parse("30000000-0000-0000-0000-000000000001");
 
+        modelBuilder.Entity<Tenant>().HasData(
+            new { Id = demoTenant, Name = "Demo", Slug = "demo", IsActive = true, CreatedAt = DateTimeOffset.UtcNow }
+        );
+
+        modelBuilder.Entity<User>().HasData(
+            new
+            {
+                Id = superUser,
+                DisplayName = "Super Admin",
+                UserName = "superadmin",
+                PasswordHash = PasswordHasher.Hash("SuperAdmin123!"),
+                Role = UserRole.SuperAdmin,
+                TenantId = (Guid?)null,
+                Email = (string?)null,
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        );
+
         modelBuilder.Entity<BilliardTable>().HasData(
-            new { Id = table1, Name = "Mesa 1", Code = "M1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, IsActive = true, ActiveMatchId = (Guid?)null });
+            new { Id = table1, TenantId = demoTenant, Name = "Mesa 1", Code = "M1", Status = BilliardTableStatus.Available, HourlyRate = 12000m, IsActive = true, ActiveMatchId = (Guid?)null }
+        );
 
         modelBuilder.Entity<ProductCategory>().HasData(
-            new { Id = drinks, Name = "Bebidas", SortOrder = 1, IsActive = true });
+            new { Id = drinks, TenantId = demoTenant, Name = "Bebidas", SortOrder = 1, IsActive = true }
+        );
 
         modelBuilder.Entity<Product>().HasData(
-            new { Id = water, CategoryId = drinks, Name = "Agua", Price = 3000m, IsActive = true });
+            new { Id = water, CategoryId = drinks, TenantId = demoTenant, Name = "Agua", Price = 3000m, IsActive = true }
+        );
 
         modelBuilder.Entity<AppSetting>().HasData(
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Key = "ReplayBufferSeconds", Value = "60", UpdatedAt = DateTimeOffset.UnixEpoch },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", UpdatedAt = DateTimeOffset.UnixEpoch },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000003"), Key = "AdminPassword", Value = "8C6976E5B5410415BDE908BD4DEE15DFB167A9C873FC4BB8A81F6F2AB448A918", UpdatedAt = DateTimeOffset.UnixEpoch },
-            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000004"), Key = "HourlyRate", Value = "12000", UpdatedAt = DateTimeOffset.UnixEpoch });
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), Key = "ReplayBufferSeconds", Value = "60", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000002"), Key = "BusinessName", Value = "Billar Tres Bandas", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000003"), Key = "AdminPassword", Value = PasswordHasher.Hash("admin"), TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow },
+            new { Id = Guid.Parse("40000000-0000-0000-0000-000000000004"), Key = "HourlyRate", Value = "12000", TenantId = (Guid?)null, UpdatedAt = DateTimeOffset.UtcNow }
+        );
     }
 }

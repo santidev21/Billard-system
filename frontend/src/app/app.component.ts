@@ -26,7 +26,7 @@ export class AppComponent implements OnInit {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         const url = event.urlAfterRedirects;
-        this.isAdminArea.set(url.startsWith('/admin') || url.startsWith('/catalog') || url.startsWith('/history') || url.startsWith('/audit'));
+        this.isAdminArea.set(url.startsWith('/admin') || url.startsWith('/super'));
       }
     });
   }

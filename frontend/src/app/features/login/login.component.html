@@ -1,22 +1,30 @@
 <section class="login-wrap">
   <form class="login-card glass" (ngSubmit)="submit()">
-    <h2>Acceso Admin</h2>
-    <p class="hint">Ingresa la clave de acceso al panel de administración.</p>
+    <h2>Acceso</h2>
+    <p class="hint">Ingresa los datos de tu local para acceder.</p>
 
-    <label>Clave de ingreso</label>
+    <label>Nombre del local</label>
+    <input [(ngModel)]="userName" name="userName" type="text" placeholder="Mi Billar" autocomplete="username" />
+
+    <label>Clave</label>
     <input [(ngModel)]="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
 
     @if (error(); as e) {
       <div class="error">{{ e }}</div>
     }
 
-    <button class="btn btn-primary" [disabled]="loading() || !password">
+    <button class="btn btn-primary" [disabled]="loading() || !userName || !password">
       @if (loading()) {
         <app-spinner [label]="'Ingresando…'" />
       } @else {
         Entrar
       }
     </button>
-    <button type="button" class="btn btn-outline" routerLink="/play">Volver al jugador</button>
+
+    <a class="forgot-link" routerLink="/forgot-password">¿Olvidaste tu clave?</a>
+
+    <div class="divider"><span>o</span></div>
+
+    <button type="button" class="btn btn-outline" routerLink="/play">Jugar modo libre</button>
   </form>
 </section>

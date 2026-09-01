@@ -13,7 +13,7 @@ public sealed class MatchHistory : Entity
     {
     }
 
-    public MatchHistory(Guid tableId, string whitePlayerName, string yellowPlayerName, decimal hourlyRateSnapshot, Guid? openedByUserId, GameMode gameMode)
+    public MatchHistory(Guid tableId, string whitePlayerName, string yellowPlayerName, decimal hourlyRateSnapshot, Guid? openedByUserId, GameMode gameMode, Guid tenantId)
     {
         TableId = tableId;
         WhitePlayerName = whitePlayerName;
@@ -21,6 +21,7 @@ public sealed class MatchHistory : Entity
         HourlyRateSnapshot = hourlyRateSnapshot;
         OpenedByUserId = openedByUserId;
         GameMode = gameMode;
+        TenantId = tenantId;
     }
 
     public Guid TableId { get; private set; }
@@ -40,6 +41,8 @@ public sealed class MatchHistory : Entity
     public Guid? OpenedByUserId { get; private set; }
     public Guid? ClosedByUserId { get; private set; }
     public int RoundNumber { get; private set; }
+    public Guid TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
     public IReadOnlyCollection<MatchScoreLog> ScoreLogs => _scoreLogs.AsReadOnly();
     public IReadOnlyCollection<MatchConsumption> Consumptions => _consumptions.AsReadOnly();
     public IReadOnlyCollection<MatchRound> Rounds => _rounds.AsReadOnly();
@@ -92,9 +95,9 @@ public sealed class MatchHistory : Entity
     public void Close(DateTimeOffset endedAt, decimal tableTotal, decimal consumptionTotal, Guid? closedByUserId)
     {
         EndedAt = endedAt;
-        TableTotal = tableTotal;
-        ConsumptionTotal = consumptionTotal;
-        GrandTotal = tableTotal + consumptionTotal;
+        TableTotal = GameMode == GameMode.FreeMode ? 0 : tableTotal;
+        ConsumptionTotal = GameMode == GameMode.FreeMode ? 0 : consumptionTotal;
+        GrandTotal = TableTotal + ConsumptionTotal;
         ClosedByUserId = closedByUserId;
     }
 

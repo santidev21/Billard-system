@@ -8,11 +8,12 @@ public sealed class Product : Entity
     {
     }
 
-    public Product(Guid categoryId, string name, decimal price)
+    public Product(Guid categoryId, string name, decimal price, Guid tenantId)
     {
         CategoryId = categoryId;
         Name = name;
         Price = price;
+        TenantId = tenantId;
     }
 
     public Guid CategoryId { get; private set; }
@@ -20,6 +21,8 @@ public sealed class Product : Entity
     public string Name { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
     public bool IsActive { get; private set; } = true;
+    public Guid TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
 
     public void Update(string name, decimal price)
     {

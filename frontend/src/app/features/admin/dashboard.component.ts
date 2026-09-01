@@ -2,6 +2,7 @@ import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { SignalRService } from '../../core/signalr.service';
 import { DashboardSummary, TableResponse, TableDetail, TopProduct } from '../../core/models';
 import { fmtMoney } from '../../core/format';
@@ -17,6 +18,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 })
 export class DashboardComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly signalr = inject(SignalRService);
 
   readonly tables = signal<TableResponse[]>([]);
@@ -49,11 +51,11 @@ export class DashboardComponent implements OnInit {
   private clockTimer: ReturnType<typeof setInterval> | undefined;
   private pollTimer: ReturnType<typeof setInterval> | undefined;
 
+  get slug(): string {
+    return this.auth.getTenantSlug() ?? '';
+  }
+
   async ngOnInit(): Promise<void> {
-    await this.loadGlobalRate();
-    await this.loadProducts();
-    this.clockTimer = setInterval(() => this.now.set(Date.now()), 1000);
-    this.pollTimer = setInterval(() => void this.refresh().catch(() => undefined), 10000);
     effect(() => {
       this.signalr.tableStateUpdated();
       this.scheduleRefresh();
@@ -64,6 +66,11 @@ export class DashboardComponent implements OnInit {
         this.pushNotification(n);
       }
     });
+
+    this.clockTimer = setInterval(() => this.now.set(Date.now()), 1000);
+    this.pollTimer = setInterval(() => void this.refresh().catch(() => undefined), 10000);
+    await this.loadGlobalRate().catch(() => undefined);
+    await this.loadProducts().catch(() => undefined);
     await this.refresh().catch(() => undefined);
   }
 
@@ -101,7 +108,11 @@ export class DashboardComponent implements OnInit {
 
   private async loadProducts(): Promise<void> {
     try {
-      this.consumptionProducts.set(await this.api.getProducts());
+      if (this.slug) {
+        this.consumptionProducts.set(await this.api.getTenantProducts(this.slug));
+      } else {
+        this.consumptionProducts.set(await this.api.getProducts());
+      }
     } catch {
       // ignore
     }
@@ -135,14 +146,16 @@ export class DashboardComponent implements OnInit {
     this.loading.set(true);
     try {
       const [tables, summary, top] = await Promise.all([
-        this.api.getTables(),
-        this.api.getDashboardSummary(),
+        this.slug ? this.api.getTenantTables(this.slug).catch(() => [] as TableResponse[]) : this.api.getTables().catch(() => [] as TableResponse[]),
+        this.api.getDashboardSummary().catch(() => null),
         this.api.getTopProducts().catch(() => [] as TopProduct[]),
       ]);
       this.tables.set(tables);
       this.summary.set(summary);
       this.topProducts.set(top);
-      this.details.set(await this.loadDetails(tables));
+      if (tables.length > 0) {
+        this.details.set(await this.loadDetails(tables));
+      }
     } finally {
       this.loading.set(false);
     }
@@ -152,7 +165,9 @@ export class DashboardComponent implements OnInit {
     const entries = await Promise.all(
       tables.map(async (table) => {
         try {
-          const detail = await this.api.getTable(table.id);
+          const detail = this.slug
+            ? await this.api.getTenantTable(this.slug, table.id)
+            : await this.api.getTables().then(() => null as unknown as TableDetail);
           return [table.id, detail] as const;
         } catch {
           return [table.id, null as unknown as TableDetail] as const;
@@ -164,8 +179,8 @@ export class DashboardComponent implements OnInit {
 
   private pushNotification(n: { type: string; tableId: string; tableName: string; total?: number }): void {
     const text = n.type === 'waiter'
-      ? `🔔 ${n.tableName} solicita mesero`
-      : `🧾 ${n.tableName} pide cuenta · Total $${fmtMoney(n.total ?? 0)}`;
+      ? `${n.tableName} solicita mesero`
+      : `${n.tableName} pide cuenta · Total $${fmtMoney(n.total ?? 0)}`;
     const entry = { id: String(++this.notifId), text, type: n.type };
     this.notifications.update((list) => [entry, ...list].slice(0, 6));
     setTimeout(() => this.notifications.update((list) => list.filter((x) => x.id !== entry.id)), 9000);
@@ -244,7 +259,8 @@ export class DashboardComponent implements OnInit {
   }
 
   copyLink(table: TableResponse): void {
-    const url = `${window.location.origin}/tables/${encodeURIComponent(table.code)}`;
+    const slug = this.slug;
+    const url = `${window.location.origin}/t/${slug}/tables/${encodeURIComponent(table.code)}`;
     void navigator.clipboard?.writeText(url).catch(() => undefined);
   }
 
@@ -263,7 +279,9 @@ export class DashboardComponent implements OnInit {
 
   async openTable(tableId: string): Promise<void> {
     try {
-      const detail = await this.api.getTable(tableId);
+      const detail = this.slug
+        ? await this.api.getTenantTable(this.slug, tableId)
+        : null;
       this.selectedTable.set(detail);
     } catch {
       // ignore
@@ -277,10 +295,10 @@ export class DashboardComponent implements OnInit {
 
   async addConsumptionToTable(tableId: string): Promise<void> {
     const product = this.consumptionProducts().find((p) => p.id === this.toastProductId);
-    if (!product) {
+    if (!product || !this.slug) {
       return;
     }
-    await this.api.addConsumption(tableId, product.id, 1, crypto.randomUUID());
+    await this.api.addConsumption(this.slug, tableId, product.id, 1, crypto.randomUUID());
     this.toastProductId = '';
     await this.refresh();
     const sel = this.selectedTable();
@@ -290,11 +308,15 @@ export class DashboardComponent implements OnInit {
   }
 
   triggerWaiter(tableId: string): void {
-    this.api.callWaiter(tableId).catch(() => undefined);
+    if (this.slug) {
+      this.api.callWaiter(this.slug, tableId).catch(() => undefined);
+    }
   }
 
   triggerCheck(tableId: string): void {
-    this.api.requestCheck(tableId).catch(() => undefined);
+    if (this.slug) {
+      this.api.requestCheck(this.slug, tableId).catch(() => undefined);
+    }
   }
 
   openStartForm(tableId: string): void {
@@ -309,7 +331,10 @@ export class DashboardComponent implements OnInit {
   }
 
   async confirmStart(tableId: string): Promise<void> {
-    await this.api.startSession(tableId, this.selectedWhite.trim() || 'Jugador 1', this.selectedYellow.trim() || 'Jugador 2', 'Managed', crypto.randomUUID());
+    if (!this.slug) {
+      return;
+    }
+    await this.api.startSession(this.slug, tableId, this.selectedWhite.trim() || 'Jugador 1', this.selectedYellow.trim() || 'Jugador 2', 'Managed', crypto.randomUUID());
     this.showStartForm = false;
     this.showFinishConfirm.set(false);
     await this.refresh();
@@ -340,7 +365,10 @@ export class DashboardComponent implements OnInit {
   }
 
   async finishSession(tableId: string): Promise<void> {
-    await this.api.finishSession(tableId, crypto.randomUUID());
+    if (!this.slug) {
+      return;
+    }
+    await this.api.finishSession(this.slug, tableId, crypto.randomUUID());
     this.showFinishConfirm.set(false);
     this.selectedTable.set(null);
     await this.refresh();

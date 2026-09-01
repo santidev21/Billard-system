@@ -16,6 +16,7 @@ export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  userName = '';
   password = '';
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
@@ -24,13 +25,17 @@ export class LoginComponent {
     this.error.set(null);
     this.loading.set(true);
     try {
-      await this.auth.login(this.password);
-      await this.router.navigate(['/admin']);
+      await this.auth.login(this.userName, this.password);
+      if (this.auth.isSuperAdmin()) {
+        await this.router.navigate(['/super']);
+      } else {
+        await this.router.navigate(['/admin']);
+      }
     } catch (e: any) {
       if (e?.status === 429) {
         this.error.set('Demasiados intentos. Espera un minuto e intenta de nuevo.');
       } else {
-        this.error.set((e?.error?.message as string) ?? 'Clave incorrecta.');
+        this.error.set((e?.error?.message as string) ?? 'Credenciales incorrectas.');
       }
       this.loading.set(false);
     }

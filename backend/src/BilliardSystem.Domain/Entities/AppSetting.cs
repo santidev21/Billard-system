@@ -8,14 +8,18 @@ public sealed class AppSetting : Entity
     {
     }
 
-    public AppSetting(string key, string value)
+    public AppSetting(string key, string value, Guid? tenantId = null)
     {
         Key = key;
         Value = value;
+        TenantId = tenantId;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public string Key { get; private set; } = string.Empty;
     public string Value { get; private set; } = string.Empty;
+    public Guid? TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
     public void Update(string value)

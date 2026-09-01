@@ -1,0 +1,71 @@
+<div class="super-layout">
+  <div class="super-head">
+    <h2>Panel Super Admin</h2>
+    <button class="btn btn-outline" (click)="logout()">Cerrar sesión</button>
+  </div>
+
+  <div class="super-tabs">
+    <button class="tab" [class.active]="activeTab() === 'locales'" (click)="switchTab('locales')">Locales</button>
+    <button class="tab" [class.active]="activeTab() === 'recoveries'" (click)="switchTab('recoveries')">Recuperaciones</button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-panel glass">
+      <app-spinner [label]="'Cargando…'" />
+    </div>
+  }
+
+  @if (activeTab() === 'locales') {
+    <div class="create-form glass">
+      <input [(ngModel)]="newLocalName" placeholder="Nombre del local" />
+      <input [(ngModel)]="newLocalPassword" placeholder="Clave inicial (opcional)" type="password" />
+      <button class="btn btn-primary" [disabled]="!newLocalName.trim()" (click)="createLocal()">Crear local</button>
+    </div>
+
+    <div class="locals-grid">
+      @for (local of locals(); track local.id) {
+        <div class="local-card glass">
+          <div class="card-top">
+            <span class="name">{{ local.name }}</span>
+            <span class="slug">{{ local.slug }}</span>
+            <span class="status" [class.active]="local.isActive">{{ local.isActive ? 'Activo' : 'Inactivo' }}</span>
+          </div>
+          <div class="card-stats">
+            <span>{{ local.tableCount }} mesas</span>
+            <span>{{ local.userCount }} usuarios</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state glass">
+          <p>No hay locales registrados.</p>
+        </div>
+      }
+    </div>
+  }
+
+  @if (activeTab() === 'recoveries') {
+    <div class="recoveries-list">
+      @for (r of recoveries(); track r.id) {
+        <div class="recovery-card glass">
+          <div class="card-top">
+            <span class="name">{{ r.userName }}</span>
+            <span class="tenant">{{ r.tenantName }}</span>
+          </div>
+          <div class="card-dates">
+            <span>Creado: {{ r.createdAt | date:'short' }}</span>
+            <span>Expira: {{ r.expiresAt | date:'short' }}</span>
+          </div>
+          @if (revealedId() === r.id && revealedCode(); as code) {
+            <div class="revealed-code">{{ code }}</div>
+          } @else {
+            <button class="btn btn-outline" (click)="revealCode(r.id)">Reveal</button>
+          }
+        </div>
+      } @empty {
+        <div class="empty-state glass">
+          <p>No hay recuperaciones pendientes.</p>
+        </div>
+      }
+    </div>
+  }
+</div>

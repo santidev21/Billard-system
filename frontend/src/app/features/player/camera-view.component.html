@@ -1,13 +1,40 @@
-<div class="cam glass">
-  <div class="feed-wrap">
-    <video #liveVideo autoplay muted playsinline class="live"></video>
-    <div class="live-indicator" [class.on]="active()">
-      <span class="dot"></span> {{ active() ? 'EN VIVO' : 'OFFLINE' }}
+@if (available()) {
+  <div class="cam glass">
+    @if (cameraOn()) {
+      <div class="feed-wrap">
+        <video #liveVideo autoplay muted playsinline class="live"></video>
+        <div class="live-indicator on">
+          <span class="dot"></span> EN VIVO
+        </div>
+      </div>
+    } @else {
+      <div class="cam-placeholder">
+        <span class="cam-icon">📷</span>
+        <span>Cámara apagada</span>
+      </div>
+    }
+
+    <div class="controls">
+      @if (devices().length > 1) {
+        <select class="device-select" (change)="onDeviceChange($any($event.target).value)">
+          @for (d of devices(); track d.deviceId) {
+            <option [value]="d.deviceId" [selected]="d.deviceId === selectedDeviceId()">{{ d.label || 'Cámara' }}</option>
+          }
+        </select>
+      }
+      <button class="btn" [class.btn-primary]="!cameraOn()" [class.btn-danger]="cameraOn()" (click)="toggleCamera()">
+        {{ cameraOn() ? 'Apagar Cámara' : 'Encender Cámara' }}
+      </button>
+    </div>
+
+    @if (error()) {
+      <div class="cam-error">{{ error() }}</div>
+    }
+
+    <div class="controls">
+      <button class="btn btn-outline replay-btn" [disabled]="!cameraOn()" (click)="openReplay()">Ver Repetición</button>
     </div>
   </div>
-  <div class="controls">
-    <button class="btn btn-primary" (click)="openReplay()">Ver Repetición</button>
-  </div>
-</div>
 
-<app-replay-player [open]="replayOpen()" [src]="replayUrl()" (closed)="closeReplay()" />
+  <app-replay-player [open]="replayOpen()" [src]="replayUrl()" (closed)="closeReplay()" />
+}

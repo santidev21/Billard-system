@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using System.Security.Claims;
 using BilliardSystem.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -14,31 +13,23 @@ public sealed class TableHub : Hub
     public Task LeaveTableGroup(Guid tableId) =>
         Groups.RemoveFromGroupAsync(Context.ConnectionId, $"table:{tableId}");
 
-    public async Task JoinAdminGroup(string token)
+    public Task JoinAdminGroup()
     {
-        if (string.IsNullOrWhiteSpace(token))
+        var tenantId = Context.User?.FindFirst("tenant")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
         {
-            return;
+            return Task.CompletedTask;
         }
-
-        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-        var scope = Context.GetHttpContext()!.RequestServices.CreateScope();
-        try
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<BilliardDbContext>();
-
-            var session = await dbContext.Sessions.FirstOrDefaultAsync(s => s.TokenHash == tokenHash);
-            if (session is not null && session.IsValid())
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
-            }
-        }
-        finally
-        {
-            (scope as IDisposable)?.Dispose();
-        }
+        return Groups.AddToGroupAsync(Context.ConnectionId, $"admins:{tenantId}");
     }
 
-    public Task LeaveAdminGroup() =>
-        Groups.RemoveFromGroupAsync(Context.ConnectionId, "admins");
+    public Task LeaveAdminGroup()
+    {
+        var tenantId = Context.User?.FindFirst("tenant")?.Value;
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            return Task.CompletedTask;
+        }
+        return Groups.RemoveFromGroupAsync(Context.ConnectionId, $"admins:{tenantId}");
+    }
 }

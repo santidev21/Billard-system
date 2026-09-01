@@ -5,110 +5,65 @@ namespace BilliardSystem.Infrastructure.Persistence;
 
 public static class DatabaseInitializer
 {
-    private static int _codeCounter = 0;
-
     public static async Task InitializeDatabaseAsync(this IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<BilliardDbContext>();
-        await dbContext.Database.EnsureCreatedAsync();
-        await UpgradeLegacySchemaAsync(dbContext);
+
+        await dbContext.Database.MigrateAsync();
+
+        await SeedSuperUserAsync(dbContext);
+        await SeedDemoTenantAsync(dbContext);
     }
 
-    private static async Task UpgradeLegacySchemaAsync(BilliardDbContext dbContext)
+    private static async Task SeedSuperUserAsync(BilliardDbContext dbContext)
     {
-        try
+        var superUserName = Environment.GetEnvironmentVariable("Super__UserName") ?? "superadmin";
+        var superPassword = Environment.GetEnvironmentVariable("Super__Password") ?? "SuperAdmin123!";
+
+        if (await dbContext.Users.AnyAsync(u => u.UserName == superUserName))
         {
-            var connection = dbContext.Database.GetDbConnection();
-            var wasOpen = connection.State == System.Data.ConnectionState.Open;
-            if (!wasOpen)
-            {
-                await connection.OpenAsync();
-            }
-
-            var hasCode = await HasColumnAsync(connection, "Tables", "Code");
-            var hasIsActive = await HasColumnAsync(connection, "Tables", "IsActive");
-
-            if (!hasCode)
-            {
-                await using var alter1 = connection.CreateCommand();
-                alter1.CommandText = "ALTER TABLE 'Tables' ADD COLUMN 'Code' TEXT NOT NULL DEFAULT '';";
-                await alter1.ExecuteNonQueryAsync();
-            }
-
-            if (!hasIsActive)
-            {
-                await using var alter2 = connection.CreateCommand();
-                alter2.CommandText = "ALTER TABLE 'Tables' ADD COLUMN 'IsActive' INTEGER NOT NULL DEFAULT 1;";
-                await alter2.ExecuteNonQueryAsync();
-            }
-
-            if (!(await HasColumnAsync(connection, "MatchRounds", "StartedAt")))
-            {
-                try
-                {
-                    await using var alter3 = connection.CreateCommand();
-                    alter3.CommandText = "ALTER TABLE 'MatchRounds' ADD COLUMN 'StartedAt' BIGINT NOT NULL DEFAULT 0;";
-                    await alter3.ExecuteNonQueryAsync();
-                }
-                catch
-                {
-                    // La tabla no existe aún; EnsureCreated la crea con el esquema nuevo.
-                }
-            }
-
-            try
-            {
-                await using var backfill = connection.CreateCommand();
-                backfill.CommandText = @"
-UPDATE 'MatchRounds'
-SET 'StartedAt' = (SELECT 'StartedAt' FROM 'MatchHistories' WHERE 'MatchHistories'.'Id' = 'MatchRounds'.'MatchHistoryId')
-WHERE 'StartedAt' = 0
-  AND 'RoundNumber' = 1;";
-                await backfill.ExecuteNonQueryAsync();
-            }
-            catch
-            {
-                // Sin backfill disponible (columna nueva sin datos previos).
-            }
-
-            if (!wasOpen)
-            {
-                await connection.CloseAsync();
-            }
-
-            var tables = await dbContext.Tables.ToListAsync();
-            var changed = false;
-            foreach (var table in tables)
-            {
-                if (string.IsNullOrWhiteSpace(table.Code))
-                {
-                    var used = tables.Where(t => !ReferenceEquals(t, table)).Select(t => t.Code).ToHashSet();
-                    while (used.Contains($"M{++_codeCounter}"))
-                    {
-                    }
-
-                    table.SetCode($"M{_codeCounter}");
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                await dbContext.SaveChangesAsync();
-            }
+            return;
         }
-        catch
-        {
-            // Esquema legado inexistente o ya migrado; la app sigue con EnsureCreated.
-        }
+
+        var passwordHash = Domain.Common.PasswordHasher.Hash(superPassword);
+        var user = new Domain.Entities.User(
+            "Super Admin",
+            superUserName,
+            passwordHash,
+            Domain.Enums.UserRole.SuperAdmin);
+
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
     }
 
-    private static async Task<bool> HasColumnAsync(System.Data.Common.DbConnection connection, string table, string column)
+    private static async Task SeedDemoTenantAsync(BilliardDbContext dbContext)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}';";
-        var result = await command.ExecuteScalarAsync();
-        return result is long l && l > 0;
+        var demoTenantId = Guid.Parse("99999999-0000-0000-0000-000000000001");
+
+        if (await dbContext.Tenants.AnyAsync(t => t.Slug == "demo"))
+        {
+            return;
+        }
+
+        var tenant = new Domain.Entities.Tenant("Demo");
+        dbContext.Tenants.Add(tenant);
+        await dbContext.SaveChangesAsync();
+
+        var table = new Domain.Entities.BilliardTable("Mesa 1", 12000m, tenant.Id);
+        table.SetCode("M1");
+        dbContext.Tables.Add(table);
+
+        var category = new Domain.Entities.ProductCategory("Bebidas", tenant.Id);
+        dbContext.Categories.Add(category);
+        await dbContext.SaveChangesAsync();
+
+        var product = new Domain.Entities.Product(category.Id, "Agua", 3000m, tenant.Id);
+        dbContext.Products.Add(product);
+
+        dbContext.Settings.Add(new Domain.Entities.AppSetting("HourlyRate", "12000", tenant.Id));
+        dbContext.Settings.Add(new Domain.Entities.AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
+
+        await dbContext.SaveChangesAsync();
     }
 }

@@ -38,6 +38,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/billard
-            docker compose pull billard
-            docker compose up -d billard
+            docker compose pull
+            docker compose up -d
             docker image prune -f

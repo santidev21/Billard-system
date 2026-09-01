@@ -5,8 +5,11 @@ import { lastValueFrom } from 'rxjs';
 import {
   AuditLog,
   DashboardSummary,
+  LocalInfo,
+  LoginResponse,
   MatchListItem,
   Product,
+  RecoveryCode,
   Settings,
   TableDetail,
   TableResponse,
@@ -18,20 +21,27 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api';
 
-  // Auth
-  login(password: string): Promise<{ token: string }> {
-    return lastValueFrom(this.http.post<{ token: string }>(`${this.base}/auth/login`, { password }));
+  login(userName: string, password: string): Promise<LoginResponse> {
+    return lastValueFrom(this.http.post<LoginResponse>(`${this.base}/auth/login`, { userName, password }));
   }
-  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  refresh(refreshToken: string): Promise<LoginResponse> {
+    return lastValueFrom(this.http.post<LoginResponse>(`${this.base}/auth/refresh`, { refreshToken }));
+  }
+  logout(refreshToken: string): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/auth/logout`, { refreshToken }));
+  }
+  forgotPassword(userName: string): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/auth/forgot`, { userName }));
+  }
+  resetPassword(userName: string, code: string, newPassword: string): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/auth/reset`, { userName, code, newPassword }));
+  }
+  changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
     return lastValueFrom(
-      this.http.post<void>(`${this.base}/auth/change-password`, { currentPassword, newPassword })
+      this.http.post<void>(`${this.base}/auth/change-password`, { userId, currentPassword, newPassword })
     );
   }
-  logout(): Promise<void> {
-    return lastValueFrom(this.http.post<void>(`${this.base}/auth/logout`, {}));
-  }
 
-  // Tables
   getTables(): Promise<TableResponse[]> {
     return lastValueFrom(this.http.get<TableResponse[]>(`${this.base}/tables`));
   }
@@ -43,9 +53,6 @@ export class ApiService {
   }
   updateAllRates(hourlyRate: number): Promise<{ updated: number }> {
     return lastValueFrom(this.http.put<{ updated: number }>(`${this.base}/tables/rate/all`, { hourlyRate }));
-  }
-  getTable(id: string): Promise<TableDetail> {
-    return lastValueFrom(this.http.get<TableDetail>(`${this.base}/tables/${id}`));
   }
   attendTable(id: string): Promise<TableResponse> {
     return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables/${id}/attend`, {}));
@@ -59,15 +66,19 @@ export class ApiService {
   deleteTable(id: string): Promise<{ ok: boolean }> {
     return lastValueFrom(this.http.delete<{ ok: boolean }>(`${this.base}/tables/${id}`));
   }
-  startSession(
-    id: string,
-    whitePlayerName: string,
-    yellowPlayerName: string,
-    gameMode: 'Managed' | 'FreeMode',
-    transactionId: string
-  ): Promise<{ tableId: string; matchId: string }> {
+
+  getTenantTables(slug: string): Promise<TableResponse[]> {
+    return lastValueFrom(this.http.get<TableResponse[]>(`${this.base}/t/${slug}/tables`));
+  }
+  getTenantTable(slug: string, identifier: string): Promise<TableDetail> {
+    return lastValueFrom(this.http.get<TableDetail>(`${this.base}/t/${slug}/tables/${identifier}`));
+  }
+  getTenantProducts(slug: string): Promise<Product[]> {
+    return lastValueFrom(this.http.get<Product[]>(`${this.base}/t/${slug}/products`));
+  }
+  startSession(slug: string, id: string, whitePlayerName: string, yellowPlayerName: string, gameMode: 'Managed' | 'FreeMode', transactionId: string): Promise<{ tableId: string; matchId: string }> {
     return lastValueFrom(
-      this.http.post<{ tableId: string; matchId: string }>(`${this.base}/tables/${id}/start`, {
+      this.http.post<{ tableId: string; matchId: string }>(`${this.base}/t/${slug}/tables/${id}/start`, {
         whitePlayerName,
         yellowPlayerName,
         gameMode,
@@ -75,40 +86,39 @@ export class ApiService {
       })
     );
   }
-  score(id: string, playerColor: 'white' | 'yellow', delta: number, transactionId: string): Promise<{ newScore: number }> {
+  score(slug: string, id: string, playerColor: 'white' | 'yellow', delta: number, transactionId: string): Promise<{ newScore: number }> {
     return lastValueFrom(
-      this.http.post<{ newScore: number }>(`${this.base}/tables/${id}/score`, { playerColor, delta, transactionId })
+      this.http.post<{ newScore: number }>(`${this.base}/t/${slug}/tables/${id}/score`, { playerColor, delta, transactionId })
     );
   }
-  renamePlayers(id: string, whitePlayerName: string, yellowPlayerName: string, transactionId: string): Promise<void> {
+  renamePlayers(slug: string, id: string, whitePlayerName: string, yellowPlayerName: string, transactionId: string): Promise<void> {
     return lastValueFrom(
-      this.http.post<void>(`${this.base}/tables/${id}/players`, { whitePlayerName, yellowPlayerName, transactionId })
+      this.http.post<void>(`${this.base}/t/${slug}/tables/${id}/players`, { whitePlayerName, yellowPlayerName, transactionId })
     );
   }
-  callWaiter(id: string): Promise<void> {
-    return lastValueFrom(this.http.post<void>(`${this.base}/tables/${id}/call-waiter`, {}));
+  callWaiter(slug: string, id: string): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/t/${slug}/tables/${id}/call-waiter`, {}));
   }
-  requestCheck(id: string): Promise<void> {
-    return lastValueFrom(this.http.post<void>(`${this.base}/tables/${id}/request-check`, {}));
+  requestCheck(slug: string, id: string): Promise<void> {
+    return lastValueFrom(this.http.post<void>(`${this.base}/t/${slug}/tables/${id}/request-check`, {}));
   }
-  addConsumption(id: string, productId: string, quantity: number, transactionId: string): Promise<{ consumptionTotal: number }> {
+  addConsumption(slug: string, id: string, productId: string, quantity: number, transactionId: string): Promise<{ consumptionTotal: number }> {
     return lastValueFrom(
-      this.http.post<{ consumptionTotal: number }>(`${this.base}/tables/${id}/consumption`, { productId, quantity, transactionId })
+      this.http.post<{ consumptionTotal: number }>(`${this.base}/t/${slug}/tables/${id}/consumption`, { productId, quantity, transactionId })
     );
   }
-  finishSession(id: string, transactionId: string): Promise<{ matchHistoryId: string; grandTotal: number }> {
-    return lastValueFrom(this.http.post<{ matchHistoryId: string; grandTotal: number }>(`${this.base}/tables/${id}/finish`, { transactionId }));
+  finishSession(slug: string, id: string, transactionId: string): Promise<{ matchHistoryId: string; grandTotal: number }> {
+    return lastValueFrom(this.http.post<{ matchHistoryId: string; grandTotal: number }>(`${this.base}/t/${slug}/tables/${id}/finish`, { transactionId }));
   }
-  finishRound(id: string, transactionId: string): Promise<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }> {
+  finishRound(slug: string, id: string, transactionId: string): Promise<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }> {
     return lastValueFrom(
-      this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/tables/${id}/finish-round`, { transactionId })
+      this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/t/${slug}/tables/${id}/finish-round`, { transactionId })
     );
   }
-  getRounds(id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }> {
-    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }>(`${this.base}/tables/${id}/rounds`));
+  getRounds(slug: string, id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }> {
+    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }>(`${this.base}/t/${slug}/tables/${id}/rounds`));
   }
 
-  // Catalog
   getProducts(): Promise<Product[]> {
     return lastValueFrom(this.http.get<Product[]>(`${this.base}/products`));
   }
@@ -122,7 +132,6 @@ export class ApiService {
     return lastValueFrom(this.http.delete<void>(`${this.base}/products/${id}`));
   }
 
-  // Settings
   getSettings(): Promise<Settings> {
     return lastValueFrom(this.http.get<Settings>(`${this.base}/settings`));
   }
@@ -130,7 +139,6 @@ export class ApiService {
     return lastValueFrom(this.http.put<void>(`${this.base}/settings`, values));
   }
 
-  // History & Audit & Dashboard
   getMatches(): Promise<MatchListItem[]> {
     return lastValueFrom(this.http.get<MatchListItem[]>(`${this.base}/matches`));
   }
@@ -145,5 +153,18 @@ export class ApiService {
   }
   getAuditLogs(): Promise<AuditLog[]> {
     return lastValueFrom(this.http.get<AuditLog[]>(`${this.base}/audit/logs`));
+  }
+
+  getSuperLocals(): Promise<LocalInfo[]> {
+    return lastValueFrom(this.http.get<LocalInfo[]>(`${this.base}/super/locals`));
+  }
+  createLocal(name: string, password?: string): Promise<LocalInfo> {
+    return lastValueFrom(this.http.post<LocalInfo>(`${this.base}/super/locals`, { name, password }));
+  }
+  getSuperRecoveries(): Promise<RecoveryCode[]> {
+    return lastValueFrom(this.http.get<RecoveryCode[]>(`${this.base}/super/recoveries`));
+  }
+  revealRecovery(id: string): Promise<{ code: string }> {
+    return lastValueFrom(this.http.post<{ code: string }>(`${this.base}/super/recoveries/${id}/reveal`, {}));
   }
 }

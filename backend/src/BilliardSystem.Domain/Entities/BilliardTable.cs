@@ -10,10 +10,11 @@ public sealed class BilliardTable : Entity
     {
     }
 
-    public BilliardTable(string name, decimal hourlyRate, string? code = null)
+    public BilliardTable(string name, decimal hourlyRate, Guid tenantId, string? code = null)
     {
         Name = name;
         HourlyRate = hourlyRate;
+        TenantId = tenantId;
         Code = code ?? string.Empty;
     }
 
@@ -23,6 +24,8 @@ public sealed class BilliardTable : Entity
     public BilliardTableStatus Status { get; private set; } = BilliardTableStatus.Available;
     public decimal HourlyRate { get; private set; }
     public Guid? ActiveMatchId { get; private set; }
+    public Guid TenantId { get; private set; }
+    public Tenant? Tenant { get; private set; }
 
     public void SetHourlyRate(decimal hourlyRate) => HourlyRate = hourlyRate;
 

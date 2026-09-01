@@ -23,22 +23,23 @@ export class AdminLayoutComponent implements OnInit {
 
   readonly showChangePassword = signal(false);
   readonly callPopup = signal<AdminNotification | null>(null);
+  readonly tenantName = signal<string | null>(null);
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
   readonly passwordError = signal<string | null>(null);
   readonly saving = signal(false);
 
-  constructor() {
+  constructor() {}
+
+  async ngOnInit(): Promise<void> {
+    this.tenantName.set(this.auth.getUser()?.tenantName ?? null);
     effect(() => {
       const n = this.signalr.adminNotification();
       if (n) {
         this.callPopup.set(n);
       }
     });
-  }
-
-  async ngOnInit(): Promise<void> {
     await this.signalr.joinAdminGroup();
   }
 
@@ -72,10 +73,9 @@ export class AdminLayoutComponent implements OnInit {
 
 
   async logout(): Promise<void> {
-    await this.api.logout().catch(() => undefined);
     await this.signalr.leaveAdminGroup();
     this.auth.logout();
-    await this.router.navigate(['/play']);
+    await this.router.navigate(['/login']);
   }
 
   openChangePassword(): void {
@@ -103,7 +103,8 @@ export class AdminLayoutComponent implements OnInit {
     }
     this.saving.set(true);
     try {
-      await this.auth.changePassword(this.currentPassword, this.newPassword);
+      const user = this.auth.getUser();
+      await this.api.changePassword(user?.name ?? '', this.currentPassword, this.newPassword);
       this.showChangePassword.set(false);
       await this.router.navigate(['/login']);
     } catch (e: any) {

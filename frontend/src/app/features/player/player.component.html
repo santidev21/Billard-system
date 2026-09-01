@@ -51,24 +51,37 @@
             <div class="t-carambolas">Carambolas: {{ totalCarambolas() }}</div>
           </div>
         </div>
-        <div class="info-bar glass">
-          <div class="timer-block">
-            <span class="label">Tiempo</span>
-            <span class="timer">{{ elapsed() }}</span>
+        @if (gameMode() !== 'FreeMode') {
+          <div class="info-bar glass">
+            <div class="timer-block">
+              <span class="label">Tiempo</span>
+              <span class="timer">{{ elapsed() }}</span>
+            </div>
+            <div class="money-block">
+              <span class="label">Consumos</span>
+              <span class="amt">${{ consumptionTotalText() }}</span>
+            </div>
+            <div class="money-block">
+              <span class="label">Tiempo</span>
+              <span class="amt">${{ timeCostText() }}</span>
+            </div>
+            <div class="money-block grand">
+              <span class="label">Total</span>
+              <span class="amt">${{ grandTotalText() }}</span>
+            </div>
           </div>
-          <div class="money-block">
-            <span class="label">Consumos</span>
-            <span class="amt">${{ consumptionTotalText() }}</span>
+        } @else {
+          <div class="info-bar glass free-mode-bar">
+            <div class="timer-block">
+              <span class="label">Tiempo</span>
+              <span class="timer">{{ elapsed() }}</span>
+            </div>
+            <div class="money-block">
+              <span class="label">Carambolas</span>
+              <span class="amt">{{ totalCarambolas() }}</span>
+            </div>
           </div>
-          <div class="money-block">
-            <span class="label">Tiempo</span>
-            <span class="amt">${{ timeCostText() }}</span>
-          </div>
-          <div class="money-block grand">
-            <span class="label">Total</span>
-            <span class="amt">${{ grandTotalText() }}</span>
-          </div>
-        </div>
+        }
       </div>
 
       <div class="side player-yellow">
@@ -95,11 +108,12 @@
         <button class="btn btn-danger long" [class.sent]="requestSent() === 'check'" (click)="requestCheck()">
           {{ requestSent() === 'check' ? '✓ Cuenta solicitada' : 'Pedir Cuenta' }}
         </button>
-      }
-      <button class="btn btn-outline" (click)="showConsumptionLog.set(true)">Ver Consumo</button>
-      <button class="btn btn-outline" (click)="showRoundHistory()">Historial de Rondas</button>
-      <button class="btn btn-primary" (click)="finishRound()">Finalizar Ronda</button>
-      @if (gameMode() === 'FreeMode') {
+        <button class="btn btn-outline" (click)="showConsumptionLog.set(true)">Ver Consumo</button>
+        <button class="btn btn-outline" (click)="showRoundHistory()">Historial de Rondas</button>
+        <button class="btn btn-primary" (click)="finishRound()">Finalizar Ronda</button>
+      } @else {
+        <button class="btn btn-outline" (click)="showRoundHistory()">Historial de Rondas</button>
+        <button class="btn btn-primary" (click)="finishRound()">Finalizar Ronda</button>
         <button class="btn btn-danger long" (click)="onRequestClose()">Terminar Partida</button>
       }
     </div>
@@ -187,7 +201,7 @@
 @if (showEnded(); as es) {
   <div class="confirm overlay">
     <div class="card">
-      <h3>⏱️ La partida ha finalizado</h3>
+      <h3>La partida ha finalizado</h3>
       <p class="msg">El juego terminó. Contacta con un mesero para iniciar uno nuevo.</p>
       @if (endedSummary(); as s) {
         <div class="ended-summary">

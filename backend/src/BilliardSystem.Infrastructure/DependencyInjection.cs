@@ -12,9 +12,9 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("BilliardDatabase")
-            ?? "Data Source=billiard-system.db";
+            ?? "Host=localhost;Database=billiard;Username=billard;Password=billard";
 
-        services.AddDbContext<BilliardDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<BilliardDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IBilliardDbContext>(provider => provider.GetRequiredService<BilliardDbContext>());
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 

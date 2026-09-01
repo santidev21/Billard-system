@@ -1,6 +1,11 @@
 <div class="admin-layout">
   <div class="admin-head">
-    <h2>Panel de Administración</h2>
+    <div class="admin-head-left">
+      <h2>Panel de Administración</h2>
+      @if (tenantName(); as name) {
+        <span class="tenant-badge">{{ name }}</span>
+      }
+    </div>
     <div class="admin-head-actions">
       <button class="btn btn-outline" (click)="openChangePassword()">Cambiar clave</button>
       <button class="btn btn-outline" (click)="logout()">Cerrar sesión</button>

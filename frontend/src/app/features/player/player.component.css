@@ -172,6 +172,7 @@
 .timer { font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--yellow-ball); }
 .amt { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .money-block.grand .amt { color: #34D399; }
+.free-mode-bar { grid-template-columns: 1fr 1fr; }
 
 .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; padding: 0.6rem 0.8rem; }
 .toolbar .btn { flex: 1; min-width: 130px; }
@@ -251,6 +252,29 @@
 @media (max-width: 900px) {
   .arena { grid-template-columns: 1fr 1fr; }
   .center-col { grid-column: 1 / -1; }
+}
+@media (max-width: 700px) {
+  app-camera-view { display: none; }
+  .arena { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .side { padding: 0.6rem 0.4rem; gap: 0.35rem; }
+  .score-btn { font-size: 3rem; max-width: 140px; padding: 0.7rem 0.3rem; }
+  .score-btns { gap: 0.25rem; max-width: 160px; }
+  .score-btns button { padding: 0.45rem 0.2rem; font-size: 0.9rem; }
+  .player-name { max-width: 160px; }
+  .player-name input { font-size: 0.85rem; padding: 0.35rem 0.4rem; }
+  .ball { width: 30px; height: 30px; }
+  .badge { font-size: 0.65rem; }
+  .toolbar { gap: 0.35rem; padding: 0.5rem 0.6rem; }
+  .toolbar .btn { min-width: 100px; font-size: 0.85rem; padding: 0.7rem 0.8rem; }
+  .info-bar { gap: 0.3rem; padding: 0.5rem 0.6rem; }
+  .timer { font-size: 1.3rem; }
+  .amt { font-size: 1.05rem; }
+  .panel-head h2 { font-size: 1.2rem; }
+  .table-badge { font-size: 0.8rem; padding: 0.3rem 0.7rem; }
+  .start-box { padding: 2rem 1rem; }
+}
+@media (max-width: 480px) {
+  .info-bar { grid-template-columns: 1fr 1fr; }
 }
 @media (max-height: 760px) {
   .ball { width: 32px; height: 32px; }

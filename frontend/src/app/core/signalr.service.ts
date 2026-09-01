@@ -3,8 +3,6 @@ import * as signalR from '@microsoft/signalr';
 
 import { ConsumptionAmount, TableStatus } from './models';
 
-const TOKEN_KEY = 'billiard-admin-token';
-
 export interface PlayerScoredEvent {
   tableId: string;
   playerColor: 'white' | 'yellow';
@@ -61,11 +59,9 @@ export class SignalRService {
       return;
     }
 
-    const token = localStorage.getItem(TOKEN_KEY);
-
     this.hub = new signalR.HubConnectionBuilder()
       .withUrl('/hubs/tables', {
-        accessTokenFactory: () => token ?? '',
+        accessTokenFactory: () => localStorage.getItem('billiard-access-token') ?? '',
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .build();
@@ -106,9 +102,8 @@ export class SignalRService {
 
   async joinAdminGroup(): Promise<void> {
     this.adminJoined = true;
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (this.hub?.state === signalR.HubConnectionState.Connected && token) {
-      await this.hub.invoke('JoinAdminGroup', token);
+    if (this.hub?.state === signalR.HubConnectionState.Connected) {
+      await this.hub.invoke('JoinAdminGroup');
     }
   }
 

@@ -1,18 +1,39 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: billiard
+      POSTGRES_USER: billiard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - billard-pg:/var/lib/postgresql/data
+    networks:
+      - billard-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billiard -d billiard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   billard:
     image: ghcr.io/santidev21/billard-system:latest
     container_name: billard
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       - AllowedHosts=billard.santidev21.tech;localhost
-      - ConnectionStrings__BilliardDatabase=Data Source=/app/data/billiard-system.db
-    volumes:
-      - billard-data:/app/data
+      - ConnectionStrings__BilliardDatabase=Host=db;Database=billiard;Username=billard;Password=${POSTGRES_PASSWORD}
+      - Jwt__Key=${JWT_KEY}
+      - Super__UserName=${SUPER_USERNAME}
+      - Super__Password=${SUPER_PASSWORD}
     networks:
       - billard-net
 
 volumes:
-  billard-data:
+  billard-pg:
 
 networks:
   billard-net:
