@@ -10,12 +10,12 @@ RUN npm run build -- --configuration production
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api-build
 WORKDIR /app
 COPY backend/BilliardSystem.slnx ./
-COPY backend/src/BilliardSystem.API/BilliardSystem.API.csproj backend/src/BilliardSystem.API/
-COPY backend/src/BilliardSystem.Application/BilliardSystem.Application.csproj backend/src/BilliardSystem.Application/
-COPY backend/src/BilliardSystem.Domain/BilliardSystem.Domain.csproj backend/src/BilliardSystem.Domain/
-COPY backend/src/BilliardSystem.Infrastructure/BilliardSystem.Infrastructure.csproj backend/src/BilliardSystem.Infrastructure/
-RUN dotnet restore
-COPY backend/src/ ./src/
+COPY backend/src/BilliardSystem.API/BilliardSystem.API.csproj src/BilliardSystem.API/
+COPY backend/src/BilliardSystem.Application/BilliardSystem.Application.csproj src/BilliardSystem.Application/
+COPY backend/src/BilliardSystem.Domain/BilliardSystem.Domain.csproj src/BilliardSystem.Domain/
+COPY backend/src/BilliardSystem.Infrastructure/BilliardSystem.Infrastructure.csproj src/BilliardSystem.Infrastructure/
+RUN dotnet restore src/BilliardSystem.API/BilliardSystem.API.csproj
+COPY backend/src/ src/
 RUN dotnet publish src/BilliardSystem.API/BilliardSystem.API.csproj -c Release -o /app/publish --no-restore
 
 # Stage 3: Runtime
