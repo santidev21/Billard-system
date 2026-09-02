@@ -4,14 +4,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: billiard
-      POSTGRES_USER: billiard
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - billard-pg:/var/lib/postgresql/data
     networks:
       - billard-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U billiard -d billiard"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d billiard"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -25,7 +25,7 @@ services:
         condition: service_healthy
     environment:
       - AllowedHosts=billard.santidev21.tech;localhost
-      - ConnectionStrings__BilliardDatabase=Host=db;Database=billiard;Username=billard;Password=${POSTGRES_PASSWORD};SslMode=Disable
+      - ConnectionStrings__BilliardDatabase=Host=db;Database=billiard;Username=postgres;Password=${POSTGRES_PASSWORD};SslMode=Disable
       - Jwt__Key=${JWT_KEY}
       - Super__UserName=${SUPER_USERNAME}
       - Super__Password=${SUPER_PASSWORD}
