@@ -20,6 +20,8 @@ services:
     image: ghcr.io/santidev21/billard-system:latest
     container_name: billard
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
     depends_on:
       db:
         condition: service_healthy
