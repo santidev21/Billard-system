@@ -9,19 +9,11 @@
   </header>
 
   @if (!running()) {
-    <div class="start-box">
-      @if (gameMode() === 'Managed') {
+    @if (gameMode() === 'Managed') {
+      <div class="start-box">
         <p class="waiting-msg">La mesa está libre. Pidele al mesero que inicie tu partida.</p>
-      } @else {
-        <div class="names">
-          <label>Jugador 1 (Blanco)</label>
-          <input [(ngModel)]="whiteInput" placeholder="Jugador 1" />
-          <label>Jugador 2 (Amarillo)</label>
-          <input [(ngModel)]="yellowInput" placeholder="Jugador 2" />
-        </div>
-        <button class="btn btn-primary big" (click)="startSession()">Iniciar Modo Libre</button>
-      }
-    </div>
+      </div>
+    }
   } @else {
     <div class="arena">
       <div class="side player-white">
