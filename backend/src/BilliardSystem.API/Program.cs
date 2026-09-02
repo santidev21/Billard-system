@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -28,6 +29,7 @@ var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = false,
@@ -56,7 +58,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminSession", policy => policy.RequireAuthenticatedUser());
-    options.AddPolicy("SuperAdmin", policy => policy.RequireAuthenticatedUser().RequireClaim("role", "SuperAdmin"));
+    options.AddPolicy("SuperAdmin", policy => policy.RequireAuthenticatedUser().RequireClaim(ClaimTypes.Role, "SuperAdmin"));
 });
 
 builder.Services.AddRateLimiter(options =>
