@@ -40,7 +40,7 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 - **Database**: SQLite via Entity Framework Core
 - **Real-time**: [SignalR](https://learn.microsoft.com/aspnet/core/signalr/) WebSockets
 - **Auth**: Custom opaque token sessions with PBKDF2 password hashing
-- **CI/CD**: GitHub Actions (build → GHCR → deploy)
+- **CI/CD**: GitHub Actions (build on VPS via deploy.sh)
 - **Deployment**: Docker + Nginx reverse proxy on VPS
 
 ## Architecture

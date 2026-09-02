@@ -17,7 +17,7 @@ services:
       retries: 10
 
   billard:
-    image: ghcr.io/santidev21/billard-system:latest
+    build: .
     container_name: billard
     restart: unless-stopped
     ports:
