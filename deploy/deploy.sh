@@ -65,9 +65,18 @@ wait_healthy() {
     local INTERVAL=5
     local ELAPSED=0
     while [ $ELAPSED -lt $TIMEOUT ]; do
-        # db has healthcheck
-        local DB_HEALTH
-        DB_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' billard-system-db-1 2>/dev/null || docker inspect --format='{{.State.Health.Status}}' billard-db-1 2>/dev/null || echo "not_found")
+        # db has healthcheck; resolve the actual container name (varies by compose project name)
+        local DB_CONTAINER=""
+        for c in billard-db-1 billard-system-db-1; do
+            if docker inspect "$c" >/dev/null 2>&1; then
+                DB_CONTAINER="$c"
+                break
+            fi
+        done
+        local DB_HEALTH="not_found"
+        if [ -n "$DB_CONTAINER" ]; then
+            DB_HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$DB_CONTAINER" 2>/dev/null | tr -d '[:space:]')
+        fi
         if [ "$DB_HEALTH" = "healthy" ]; then
             log "Database healthy."
             break
