@@ -68,7 +68,7 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           ssh -i "$SSH_KEY" -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" \
-            'cd /opt/billard && chmod +x ./deploy/deploy.sh && ./deploy/deploy.sh deploy'
+            'cd /opt/billard && git fetch origin master && git reset --hard origin/master && chmod +x ./deploy/deploy.sh && ./deploy/deploy.sh deploy'
 
       - name: Cleanup SSH key
         if: always()
