@@ -39,29 +39,38 @@ public static class DatabaseInitializer
 
     private static async Task SeedDemoTenantAsync(BilliardDbContext dbContext)
     {
-        if (await dbContext.Tenants.AnyAsync(t => t.Slug == "demo"))
+        var tenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Slug == "demo");
+
+        if (tenant is null)
         {
-            return;
+            tenant = new Domain.Entities.Tenant("Demo");
+            dbContext.Tenants.Add(tenant);
+            await dbContext.SaveChangesAsync();
         }
 
-        var tenant = new Domain.Entities.Tenant("Demo");
-        dbContext.Tenants.Add(tenant);
-        await dbContext.SaveChangesAsync();
+        if (!await dbContext.Tables.AnyAsync(t => t.TenantId == tenant.Id))
+        {
+            var table = new Domain.Entities.BilliardTable("Mesa 1", 12000m, tenant.Id);
+            table.SetCode("M1");
+            dbContext.Tables.Add(table);
 
-        var table = new Domain.Entities.BilliardTable("Mesa 1", 12000m, tenant.Id);
-        table.SetCode("M1");
-        dbContext.Tables.Add(table);
+            if (!await dbContext.Categories.AnyAsync(c => c.TenantId == tenant.Id))
+            {
+                var category = new Domain.Entities.ProductCategory("Bebidas", tenant.Id);
+                dbContext.Categories.Add(category);
+                await dbContext.SaveChangesAsync();
 
-        var category = new Domain.Entities.ProductCategory("Bebidas", tenant.Id);
-        dbContext.Categories.Add(category);
-        await dbContext.SaveChangesAsync();
+                var product = new Domain.Entities.Product(category.Id, "Agua", 3000m, tenant.Id);
+                dbContext.Products.Add(product);
+            }
 
-        var product = new Domain.Entities.Product(category.Id, "Agua", 3000m, tenant.Id);
-        dbContext.Products.Add(product);
+            if (!await dbContext.Settings.AnyAsync(s => s.TenantId == tenant.Id))
+            {
+                dbContext.Settings.Add(new Domain.Entities.AppSetting("HourlyRate", "12000", tenant.Id));
+                dbContext.Settings.Add(new Domain.Entities.AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
+            }
 
-        dbContext.Settings.Add(new Domain.Entities.AppSetting("HourlyRate", "12000", tenant.Id));
-        dbContext.Settings.Add(new Domain.Entities.AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
-
-        await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
+        }
     }
 }

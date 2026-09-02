@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, timeout } from 'rxjs';
 
 import {
   AuditLog,
@@ -119,6 +119,18 @@ export class ApiService {
     const s = slug || 'demo';
     return lastValueFrom(
       this.http.post<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${id}/consumption`, { productId, quantity, transactionId })
+    );
+  }
+  updateConsumption(slug: string, tableId: string, consumptionId: string, quantity: number, transactionId: string): Promise<{ consumptionTotal: number }> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.put<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`, { quantity, transactionId })
+    );
+  }
+  deleteConsumption(slug: string, tableId: string, consumptionId: string): Promise<{ consumptionTotal: number }> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.delete<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`)
     );
   }
   finishSession(slug: string, id: string, transactionId: string): Promise<{ matchHistoryId: string; grandTotal: number }> {

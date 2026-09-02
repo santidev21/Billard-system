@@ -358,8 +358,16 @@ public static class BilliardEndpoints
             var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
             if (tenant is null) return Results.NotFound();
 
-            var table = await FindTableAsync(dbContext, identifier, cancellationToken);
-            if (table is null || table.TenantId != tenant.Id) return Results.NotFound();
+            BilliardTable? table;
+            if (Guid.TryParse(identifier, out var id))
+                table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenant.Id, cancellationToken);
+            else
+            {
+                var code = identifier.Trim().ToUpperInvariant();
+                table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Code == code && t.TenantId == tenant.Id, cancellationToken);
+            }
+
+            if (table is null) return Results.NotFound();
             return Results.Ok(await ToTableDetailAsync(dbContext, table, cancellationToken));
         });
 
@@ -610,6 +618,20 @@ public static class BilliardEndpoints
             if (request.GameMode == GameMode.FreeMode && (!string.IsNullOrWhiteSpace(request.ConsumptionProduct) || request.ConsumptionQuantity > 0))
                 return Results.BadRequest(new { message = "El modo libre no permite agregar consumo." });
 
+            if (table.ActiveMatchId is { } staleMatchId && request.GameMode == GameMode.FreeMode)
+            {
+                var staleMatch = await dbContext.MatchHistories.FirstOrDefaultAsync(h => h.Id == staleMatchId, ct);
+                if (staleMatch is not null && staleMatch.GameMode == GameMode.FreeMode)
+                {
+                    var endedAt = DateTimeOffset.UtcNow;
+                    staleMatch.Close(endedAt, 0, 0, null);
+                    table.EndSession(staleMatch.Id, null);
+                    await dbContext.SaveChangesAsync(ct);
+                    await WriteAuditAsync(dbContext, AuditActionType.SessionEnded, null, table.Id, staleMatch.Id, null,
+                        $"Sesión libre stale cerrada automáticamente en {table.Name}", tenant.Id, ct);
+                }
+            }
+
             var match = new MatchHistory(
                 table.Id, request.WhitePlayerName, request.YellowPlayerName,
                 table.HourlyRate, null, request.GameMode, tenant.Id);
@@ -708,6 +730,65 @@ public static class BilliardEndpoints
             {
                 tableId = id,
                 item = new ConsumptionAmountResponse(consumption.Id, product.Name, product.Price, request.Quantity, product.Price * request.Quantity, consumption.CreatedAt),
+                consumptionTotal = match.ConsumptionTotal
+            }, ct);
+            return Results.Ok(new ConsumptionAddedResponse(match.ConsumptionTotal));
+        });
+
+        api.MapPut("/t/{slug}/tables/{id}/consumption/{consumptionId}", async (
+            string slug, Guid id, Guid consumptionId, UpdateConsumptionRequest request,
+            BilliardDbContext dbContext, ClaimsPrincipal user, IHubContext<TableHub> hub, CancellationToken ct) =>
+        {
+            if (request.Quantity is < 1 or > 999) return Results.BadRequest(new { message = "La cantidad debe estar entre 1 y 999." });
+            if (await IsIdempotentAsync(dbContext, request.TransactionId, ct)) return Results.Ok();
+
+            var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Slug == slug, ct);
+            if (tenant is null) return Results.NotFound();
+
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenant.Id, ct);
+            if (table?.ActiveMatchId is not { } matchId) return Results.BadRequest("No hay partida activa.");
+
+            var match = await dbContext.MatchHistories.Include(h => h.Consumptions).FirstOrDefaultAsync(h => h.Id == matchId, ct);
+            if (match is null) return Results.NotFound();
+
+            match.UpdateConsumption(consumptionId, request.Quantity);
+            await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.ConsumptionUpdated, null, table.Id, match.Id, request.TransactionId,
+                $"Consumo actualizado cantidad={request.Quantity}", table.TenantId, ct);
+
+            await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
+            {
+                tableId = id,
+                item = (object?)null,
+                consumptionTotal = match.ConsumptionTotal
+            }, ct);
+            return Results.Ok(new ConsumptionAddedResponse(match.ConsumptionTotal));
+        });
+
+        api.MapDelete("/t/{slug}/tables/{id}/consumption/{consumptionId}", async (
+            string slug, Guid id, Guid consumptionId, Guid? transactionId,
+            BilliardDbContext dbContext, IHubContext<TableHub> hub, CancellationToken ct) =>
+        {
+            if (await IsIdempotentAsync(dbContext, transactionId, ct)) return Results.Ok();
+
+            var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Slug == slug, ct);
+            if (tenant is null) return Results.NotFound();
+
+            var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenant.Id, ct);
+            if (table?.ActiveMatchId is not { } matchId) return Results.BadRequest("No hay partida activa.");
+
+            var match = await dbContext.MatchHistories.Include(h => h.Consumptions).FirstOrDefaultAsync(h => h.Id == matchId, ct);
+            if (match is null) return Results.NotFound();
+
+            match.RemoveConsumption(consumptionId);
+            await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.ConsumptionRemoved, null, table.Id, match.Id, transactionId,
+                $"Consumo {consumptionId} eliminado", table.TenantId, ct);
+
+            await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
+            {
+                tableId = id,
+                item = (object?)null,
                 consumptionTotal = match.ConsumptionTotal
             }, ct);
             return Results.Ok(new ConsumptionAddedResponse(match.ConsumptionTotal));
@@ -814,7 +895,18 @@ public static class BilliardEndpoints
         {
             var table = await dbContext.Tables.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id, ct);
             if (table is null) return Results.NotFound();
-            if (table.ActiveMatchId is not { } matchId) return Results.Ok(new RoundHistoryResponse(0, 0, 0, []));
+
+            Guid? matchId = table.ActiveMatchId;
+            if (matchId is null)
+            {
+                var lastMatch = await dbContext.MatchHistories.AsNoTracking()
+                    .Where(h => h.TableId == id)
+                    .OrderByDescending(h => h.StartedAt)
+                    .FirstOrDefaultAsync(ct);
+                matchId = lastMatch?.Id;
+            }
+
+            if (matchId is null) return Results.Ok(new RoundHistoryResponse(0, 0, 0, []));
 
             var match = await dbContext.MatchHistories.AsNoTracking().Include(h => h.Rounds).FirstOrDefaultAsync(h => h.Id == matchId, ct);
             if (match is null) return Results.NotFound();
@@ -854,7 +946,7 @@ public static class BilliardEndpoints
         {
             var tenantId = user.GetTenantId();
             if (tenantId is null) return Results.Forbid();
-            var today = DateTimeOffset.UtcNow.Date;
+            var today = new DateTimeOffset(DateTime.UtcNow.Date, TimeSpan.Zero);
             var tables = await dbContext.Tables.AsNoTracking().Where(t => t.TenantId == tenantId && t.IsActive).ToListAsync(ct);
             var endedToday = await dbContext.MatchHistories.AsNoTracking()
                 .Where(h => h.TenantId == tenantId && h.EndedAt != null && h.EndedAt >= today).ToListAsync(ct);
@@ -869,7 +961,7 @@ public static class BilliardEndpoints
         api.MapGet("/dashboard/top-products", async (BilliardDbContext dbContext, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var tenantId = user.GetTenantId();
-            var start = DateTimeOffset.UtcNow.Date.AddDays(-7);
+            var start = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-7), TimeSpan.Zero);
             var rows = await dbContext.MatchConsumptions.AsNoTracking()
                 .Where(i => i.CreatedAt >= start && i.MatchHistory != null && i.MatchHistory.TenantId == tenantId)
                 .GroupBy(i => i.ProductNameSnapshot)
@@ -1011,6 +1103,7 @@ public sealed record StartSessionRequest(string WhitePlayerName, string YellowPl
 public sealed record ScoreRequest(string PlayerColor, int Delta, Guid? TransactionId, Guid? UserId);
 public sealed record RenamePlayersRequest(string WhitePlayerName, string YellowPlayerName, Guid? TransactionId, Guid? UserId);
 public sealed record AddConsumptionRequest(Guid ProductId, int Quantity, Guid? TransactionId, Guid? UserId);
+public sealed record UpdateConsumptionRequest(int Quantity, Guid? TransactionId);
 public sealed record CreateProductRequest(string Name, decimal Price);
 public sealed record UpdateProductRequest(string Name, decimal Price);
 public sealed record TableRequest(Guid? TransactionId, Guid? UserId);

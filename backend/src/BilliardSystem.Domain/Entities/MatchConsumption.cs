@@ -26,4 +26,11 @@ public sealed class MatchConsumption : Entity
     public int Quantity { get; private set; }
     public decimal Total => UnitPriceSnapshot * Quantity;
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
+
+    public void SetQuantity(int quantity)
+    {
+        if (quantity < 1 || quantity > 999)
+            throw new ArgumentException("Quantity must be between 1 and 999.");
+        Quantity = quantity;
+    }
 }

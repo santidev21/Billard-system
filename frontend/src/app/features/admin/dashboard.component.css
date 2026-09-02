@@ -130,6 +130,15 @@
 .mm { color: var(--text-muted); }
 .add-consumo { display: flex; gap: 0.5rem; }
 .add-consumo select { flex: 1; padding: 0.7rem; border-radius: 10px; background: rgba(0,0,0,0.3); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); }
+.consumo-section { display: flex; flex-direction: column; gap: 0.6rem; }
+.consumo-section h4 { margin: 0.5rem 0 0.25rem; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.consumo-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.consumo-row { display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.7rem; border-radius: 8px; }
+.consumo-name { flex: 1; font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.consumo-qty { color: var(--text-muted); font-size: 0.85rem; min-width: 2.2rem; text-align: center; }
+.consumo-sub { font-weight: 700; min-width: 5rem; text-align: right; }
+.consumo-qty-input { width: 3.5rem; padding: 0.35rem 0.4rem; border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.15); text-align: center; font-weight: 700; font-size: 0.9rem; }
+.add-consumo .consumo-qty-input { width: 3rem; flex: 0 0 auto; }
 
 @keyframes blink { 50% { opacity: 0.2; } }
 

@@ -164,23 +164,48 @@
             <div class="mm">Carambolas: {{ m.whiteScore + m.yellowScore }} · Consumo: ${{ fmtMoney(m.consumptionTotal) }}</div>
           </div>
           <button class="btn btn-primary" (click)="requestFinish()">Cerrar mesa</button>
+
+          @if (consumptionProducts().length) {
+            <div class="consumo-section">
+              @if (m.consumptions.length) {
+                <h4>Consumos actuales ({{ m.consumptions.length }})</h4>
+                <div class="consumo-list">
+                  @for (c of m.consumptions; track c.id) {
+                    <div class="consumo-row">
+                      @if (editingConsumptionId === c.id) {
+                        <span class="consumo-name">{{ c.productName }}</span>
+                        <input type="number" [(ngModel)]="editQuantity" min="1" max="999" class="consumo-qty-input" />
+                        <span class="consumo-sub">${{ fmtMoney(c.unitPrice * editQuantity) }}</span>
+                        <button class="mini primary" (click)="saveEditConsumption(t.id, c.id)">OK</button>
+                        <button class="mini" (click)="cancelEditConsumption()">✕</button>
+                      } @else {
+                        <span class="consumo-name">{{ c.productName }}</span>
+                        <span class="consumo-qty">x{{ c.quantity }}</span>
+                        <span class="consumo-sub">${{ fmtMoney(c.total) }}</span>
+                        <button class="mini" (click)="startEditConsumption(c.id, c.quantity)">Editar</button>
+                        <button class="mini danger" (click)="removeConsumptionFromTable(t.id, c.id)">✕</button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+              <div class="add-consumo">
+                <select [(ngModel)]="toastProductId">
+                  <option value="" disabled>Agregar consumo…</option>
+                  @for (p of consumptionProducts(); track p.id) {
+                    <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
+                  }
+                </select>
+                <input type="number" [(ngModel)]="toastQuantity" min="1" max="999" class="consumo-qty-input" />
+                <button class="btn btn-primary" [disabled]="!toastProductId || toastQuantity < 1" (click)="addConsumptionToTable(t.id)">Agregar</button>
+              </div>
+            </div>
+          }
         } @else {
           <div class="start-form">
             <input [(ngModel)]="selectedWhite" placeholder="Jugador blanco" />
             <input [(ngModel)]="selectedYellow" placeholder="Jugador amarillo" />
             <button class="btn btn-primary" (click)="confirmStart(t.id)">Iniciar sesión</button>
-          </div>
-        }
-
-        @if (consumptionProducts().length) {
-          <div class="add-consumo">
-            <select [(ngModel)]="toastProductId">
-              <option value="" disabled>Agregar consumo…</option>
-              @for (p of consumptionProducts(); track p.id) {
-                <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
-              }
-            </select>
-            <button class="btn btn-primary" [disabled]="!toastProductId" (click)="addConsumptionToTable(t.id)">Agregar</button>
           </div>
         }
       </div>

@@ -92,6 +92,26 @@ public sealed class MatchHistory : Entity
         return consumption;
     }
 
+    public void UpdateConsumption(Guid consumptionId, int newQuantity)
+    {
+        var consumption = _consumptions.FirstOrDefault(c => c.Id == consumptionId);
+        if (consumption is null)
+            throw new InvalidOperationException("Consumption not found.");
+        if (newQuantity < 1 || newQuantity > 999)
+            throw new ArgumentException("Quantity must be between 1 and 999.");
+        consumption.SetQuantity(newQuantity);
+        ConsumptionTotal = _consumptions.Sum(item => item.Total);
+    }
+
+    public void RemoveConsumption(Guid consumptionId)
+    {
+        var consumption = _consumptions.FirstOrDefault(c => c.Id == consumptionId);
+        if (consumption is null)
+            throw new InvalidOperationException("Consumption not found.");
+        _consumptions.Remove(consumption);
+        ConsumptionTotal = _consumptions.Sum(item => item.Total);
+    }
+
     public void Close(DateTimeOffset endedAt, decimal tableTotal, decimal consumptionTotal, Guid? closedByUserId)
     {
         EndedAt = endedAt;

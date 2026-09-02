@@ -14,5 +14,7 @@ public enum AuditActionType
     ProductChanged = 10,
     UserAuthenticated = 11,
     RoundCompleted = 12,
-    TableDeleted = 13
+    TableDeleted = 13,
+    ConsumptionUpdated = 14,
+    ConsumptionRemoved = 15
 }

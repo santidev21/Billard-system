@@ -104,9 +104,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly router: Router
-  ) {}
-
-  async ngOnInit(): Promise<void> {
+  ) {
     effect(() => {
       this.signalr.tableStateUpdated();
       if (this.tableId()) {
@@ -155,9 +153,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
         void this.refreshFromServer();
       }
     });
+  }
 
+  async ngOnInit(): Promise<void> {
     this.route.params.subscribe(async (params) => {
       this.loading.set(true);
+      this.resetState();
       const slug = params['slug'];
       const id = params['id'];
 
@@ -172,23 +173,65 @@ export class PlayerComponent implements OnInit, OnDestroy {
           }
         } else {
           await this.autoSelectTable(slug);
+          await this.loadProductsForSlug(slug);
+          if (this.gameMode() === 'FreeMode' && this.tableId() && !this.running()) {
+            const tableId = this.tableId();
+            try {
+              const detail = await this.api.getTenantTable(slug, tableId);
+              if (!detail.activeMatch) {
+                await this.startSession();
+              }
+            } catch {}
+          }
         }
       } else {
         this.slug = 'demo';
         this.tableId.set('');
         this.gameMode.set('FreeMode');
         await this.autoSelectTable('demo');
+        await this.loadProductsForSlug('demo');
+        if (this.tableId() && !this.running()) {
+          try {
+            const detail = await this.api.getTenantTable('demo', this.tableId());
+            if (!detail.activeMatch) {
+              await this.startSession();
+            }
+          } catch {}
+        }
       }
 
       this.loading.set(false);
       this.startPolling();
     });
-    await this.loadProducts();
   }
 
   closeEnded(): void {
     this.showEnded.set(false);
     this.endedSummary.set(null);
+  }
+
+  private resetState(): void {
+    this.running.set(false);
+    this.whiteScore.set(0);
+    this.yellowScore.set(0);
+    this.startedAt.set(null);
+    this.consumptionTotal.set(0);
+    this.consumptions.set([]);
+    this.roundNumber.set(0);
+    this.lastRound.set(null);
+    this.showRounds.set(false);
+    this.rounds.set(null);
+    this.showConsumptionLog.set(false);
+    this.showConfirm.set(false);
+    this.showEnded.set(false);
+    this.endedSummary.set(null);
+    this.requestSent.set(null);
+    this.whiteName.set('Jugador 1');
+    this.yellowName.set('Jugador 2');
+    this.whiteInput = 'Jugador 1';
+    this.yellowInput = 'Jugador 2';
+    if (this.tickTimer) clearInterval(this.tickTimer);
+    if (this.pollTimer) clearInterval(this.pollTimer);
   }
 
   private async refreshFromServer(): Promise<void> {
@@ -251,6 +294,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
         localStorage.setItem('defaultRate', String(pick.hourlyRate));
         await this.signalr.joinTable(pick.id);
       }
+    } catch {
+      // offline
+    }
+  }
+
+  private async loadProductsForSlug(slug: string): Promise<void> {
+    try {
+      this.products.set(await this.api.getTenantProducts(slug));
     } catch {
       // offline
     }
@@ -355,10 +406,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.lastRound.set(r.winnerName ? `Ronda ${r.roundNumber}: gana ${r.winnerName}` : `Ronda ${r.roundNumber}: empate`);
         setTimeout(() => this.lastRound.set(null), 4000);
       } catch {
-        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', tableId: this.tableId(), payload: {} });
+        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', slug: this.slug, tableId: this.tableId(), payload: {} });
       }
     } else {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', tableId: this.tableId(), payload: {} });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', slug: this.slug, tableId: this.tableId(), payload: {} });
     }
     this.whiteScore.set(0);
     this.yellowScore.set(0);
@@ -416,13 +467,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
 
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', tableId: this.tableId(), payload: { playerColor: color, delta } });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', slug: this.slug, tableId: this.tableId(), payload: { playerColor: color, delta } });
       return;
     }
     try {
       await this.api.score(this.slug, this.tableId(), color, delta, tx);
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', tableId: this.tableId(), payload: { playerColor: color, delta } });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', slug: this.slug, tableId: this.tableId(), payload: { playerColor: color, delta } });
     }
   }
 
@@ -448,13 +499,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
     const payload = { whitePlayerName: this.whiteName(), yellowPlayerName: this.yellowName(), gameMode: this.gameMode() };
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', tableId: this.tableId(), payload });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', slug: this.slug, tableId: this.tableId(), payload });
       return;
     }
     try {
       await this.api.startSession(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.gameMode(), tx);
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', tableId: this.tableId(), payload });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', slug: this.slug, tableId: this.tableId(), payload });
     }
   }
 
@@ -484,13 +535,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.consumptionTotal.update((t) => t + product.price);
 
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', tableId: this.tableId(), payload: { productId, quantity: 1 } });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', slug: this.slug, tableId: this.tableId(), payload: { productId, quantity: 1 } });
       return;
     }
     try {
       await this.api.addConsumption(this.slug, this.tableId(), productId, 1, tx);
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', tableId: this.tableId(), payload: { productId, quantity: 1 } });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', slug: this.slug, tableId: this.tableId(), payload: { productId, quantity: 1 } });
     }
   }
 
@@ -509,10 +560,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
       try {
         await this.api.finishSession(this.slug, this.tableId(), tx);
       } catch {
-        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', tableId: this.tableId(), payload: {} });
+        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', slug: this.slug, tableId: this.tableId(), payload: {} });
       }
     } else {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', tableId: this.tableId(), payload: {} });
+      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', slug: this.slug, tableId: this.tableId(), payload: {} });
     }
     this.endedSummary.set({
       time: this.elapsed(),

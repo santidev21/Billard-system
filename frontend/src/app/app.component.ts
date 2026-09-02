@@ -4,6 +4,7 @@ import { NavigationEnd } from '@angular/router';
 
 import { SignalRService } from './core/signalr.service';
 import { OfflineQueueService } from './core/offline-queue.service';
+import { OfflineSyncService } from './core/offline-sync.service';
 
 @Component({
   selector: 'app-root',
@@ -21,6 +22,7 @@ export class AppComponent implements OnInit {
   constructor(
     private readonly signalr: SignalRService,
     private readonly queue: OfflineQueueService,
+    private readonly sync: OfflineSyncService,
     private readonly router: Router
   ) {
     this.router.events.subscribe((event) => {
@@ -32,9 +34,13 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    window.addEventListener('online', () => this.online.set(true));
+    window.addEventListener('online', () => {
+      this.online.set(true);
+      void this.sync.flush();
+    });
     window.addEventListener('offline', () => this.online.set(false));
     await this.queue.open();
     await this.signalr.connect();
+    void this.sync.flush();
   }
 }

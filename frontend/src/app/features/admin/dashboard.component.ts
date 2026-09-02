@@ -38,6 +38,9 @@ export class DashboardComponent implements OnInit {
   newTableCode = '';
   newTableRate = 12000;
   toastProductId = '';
+  toastQuantity = 1;
+  editingConsumptionId = '';
+  editQuantity = 1;
   selectedWhite = '';
   selectedYellow = '';
   showStartForm = false;
@@ -55,7 +58,7 @@ export class DashboardComponent implements OnInit {
     return this.auth.getTenantSlug() ?? '';
   }
 
-  async ngOnInit(): Promise<void> {
+  constructor() {
     effect(() => {
       this.signalr.tableStateUpdated();
       this.scheduleRefresh();
@@ -66,7 +69,9 @@ export class DashboardComponent implements OnInit {
         this.pushNotification(n);
       }
     });
+  }
 
+  async ngOnInit(): Promise<void> {
     this.clockTimer = setInterval(() => this.now.set(Date.now()), 1000);
     this.pollTimer = setInterval(() => void this.refresh().catch(() => undefined), 10000);
     await this.loadGlobalRate().catch(() => undefined);
@@ -145,19 +150,26 @@ export class DashboardComponent implements OnInit {
   private async refresh(): Promise<void> {
     this.loading.set(true);
     try {
-      const [tables, summary, top] = await Promise.all([
-        this.slug ? this.api.getTenantTables(this.slug).catch(() => [] as TableResponse[]) : this.api.getTables().catch(() => [] as TableResponse[]),
-        this.api.getDashboardSummary().catch(() => null),
-        this.api.getTopProducts().catch(() => [] as TopProduct[]),
+      await Promise.race([
+        this.doRefresh(),
+        new Promise<void>((resolve) => setTimeout(() => resolve(), 12000)),
       ]);
-      this.tables.set(tables);
-      this.summary.set(summary);
-      this.topProducts.set(top);
-      if (tables.length > 0) {
-        this.details.set(await this.loadDetails(tables));
-      }
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private async doRefresh(): Promise<void> {
+    const [tables, summary, top] = await Promise.all([
+      this.slug ? this.api.getTenantTables(this.slug).catch(() => [] as TableResponse[]) : this.api.getTables().catch(() => [] as TableResponse[]),
+      this.api.getDashboardSummary().catch(() => null),
+      this.api.getTopProducts().catch(() => [] as TopProduct[]),
+    ]);
+    this.tables.set(tables);
+    this.summary.set(summary);
+    this.topProducts.set(top);
+    if (tables.length > 0) {
+      this.details.set(await this.loadDetails(tables));
     }
   }
 
@@ -298,13 +310,42 @@ export class DashboardComponent implements OnInit {
     if (!product || !this.slug) {
       return;
     }
-    await this.api.addConsumption(this.slug, tableId, product.id, 1, crypto.randomUUID());
+    await this.api.addConsumption(this.slug, tableId, product.id, this.toastQuantity, crypto.randomUUID());
     this.toastProductId = '';
+    this.toastQuantity = 1;
     await this.refresh();
     const sel = this.selectedTable();
     if (sel) {
       await this.openTable(sel.id);
     }
+  }
+
+  startEditConsumption(consumptionId: string, currentQty: number): void {
+    this.editingConsumptionId = consumptionId;
+    this.editQuantity = currentQty;
+  }
+
+  cancelEditConsumption(): void {
+    this.editingConsumptionId = '';
+    this.editQuantity = 1;
+  }
+
+  async saveEditConsumption(tableId: string, consumptionId: string): Promise<void> {
+    if (!this.slug || this.editQuantity < 1) return;
+    await this.api.updateConsumption(this.slug, tableId, consumptionId, this.editQuantity, crypto.randomUUID());
+    this.editingConsumptionId = '';
+    this.editQuantity = 1;
+    await this.refresh();
+    const sel = this.selectedTable();
+    if (sel) await this.openTable(sel.id);
+  }
+
+  async removeConsumptionFromTable(tableId: string, consumptionId: string): Promise<void> {
+    if (!this.slug) return;
+    await this.api.deleteConsumption(this.slug, tableId, consumptionId);
+    await this.refresh();
+    const sel = this.selectedTable();
+    if (sel) await this.openTable(sel.id);
   }
 
   triggerWaiter(tableId: string): void {
