@@ -25,3 +25,7 @@ data/
 .idea/
 *.swp
 *.swo
+
+# Local app settings (contain DB passwords)
+backend/src/BilliardSystem.API/appsettings.json
+backend/src/BilliardSystem.API/appsettings.Development.json
