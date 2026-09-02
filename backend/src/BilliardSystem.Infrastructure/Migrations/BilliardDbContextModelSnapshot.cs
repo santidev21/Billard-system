@@ -90,7 +90,7 @@ namespace BilliardSystem.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "Key")
                         .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .HasFilter("\"TenantId\" IS NOT NULL");
 
                     b.ToTable("Settings", (string)null);
 
@@ -114,7 +114,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                             Id = new Guid("40000000-0000-0000-0000-000000000003"),
                             Key = "AdminPassword",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Value = "v2.6Ic/mVDcKgJozbBnxmNsctzYo+3+t1wFk+0rLuOwaSE=.HdcEzj4d659rJtH/WYI4xpMBL1BaghohWXPZ9udbQT0="
+                            Value = "v2.BM/Xkdcxa8LiNQIsaHJvrDTTWS1sJis/Q8ocQ1P7f0M=.4C+pIn31rkL5XxXsoKvJFsrGsrqJU8/6u7sTu6D0s2k="
                         },
                         new
                         {
@@ -167,7 +167,7 @@ namespace BilliardSystem.Infrastructure.Migrations
 
                     b.HasIndex("TransactionId")
                         .IsUnique()
-                        .HasFilter("[TransactionId] IS NOT NULL");
+                        .HasFilter("\"TransactionId\" IS NOT NULL");
 
                     b.ToTable("AuditLogs", (string)null);
                 });
@@ -604,7 +604,7 @@ namespace BilliardSystem.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "UserName")
                         .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .HasFilter("\"TenantId\" IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
 
@@ -615,7 +615,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Super Admin",
                             IsActive = true,
-                            PasswordHash = "v2.7dUT8Un51BdH5+EwdZHvhIUXdQSVOomUAXs/RqvTzKQ=.DyxhL/7jStpGonBleM1UcUC24STymAb7PWPPbaJLBIg=",
+                            PasswordHash = "v2.vjWPdK7EVqbdh/6weZfHQDe2AOvTJ22SdRPfU9hKS5E=.AisAaA487LYeXDWFSPBd0dcwSi9vipiBl0ws9A0LUoE=",
                             Role = "SuperAdmin",
                             UserName = "superadmin"
                         });

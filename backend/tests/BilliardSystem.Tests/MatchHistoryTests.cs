@@ -13,7 +13,8 @@ public sealed class MatchHistoryTests
             "Amarillo",
             12000m,
             openedByUserId: null,
-            gameMode: GameMode.Managed);
+            gameMode: GameMode.Managed,
+            tenantId: Guid.NewGuid());
 
     [Fact]
     public void AddScore_WhenPositiveIncrements_UpdatesScoreAndTotal()

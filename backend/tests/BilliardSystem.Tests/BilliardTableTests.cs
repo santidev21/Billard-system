@@ -10,7 +10,7 @@ public sealed class BilliardTableTests
     [Fact]
     public void StartSession_WhenTableIsAvailable_MarksTableOccupiedAndRaisesEvent()
     {
-        var table = new BilliardTable("Mesa 1", 12000m);
+        var table = new BilliardTable("Mesa 1", 12000m, Guid.NewGuid());
         var matchId = Guid.NewGuid();
 
         table.StartSession(matchId, "Blanco", "Amarillo", employeeId: null);
@@ -24,7 +24,7 @@ public sealed class BilliardTableTests
     [Fact]
     public void StartSession_WhenTableIsAlreadyOccupied_Throws()
     {
-        var table = new BilliardTable("Mesa 1", 12000m);
+        var table = new BilliardTable("Mesa 1", 12000m, Guid.NewGuid());
         table.StartSession(Guid.NewGuid(), "Blanco", "Amarillo", employeeId: null);
 
         var act = () => table.StartSession(Guid.NewGuid(), "Blanco", "Amarillo", employeeId: null);

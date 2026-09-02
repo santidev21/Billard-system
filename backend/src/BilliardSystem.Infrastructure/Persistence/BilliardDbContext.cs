@@ -84,7 +84,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(user => user.Id);
             builder.Property(user => user.DisplayName).HasMaxLength(120).IsRequired();
             builder.Property(user => user.UserName).HasMaxLength(80).IsRequired();
-            builder.HasIndex(user => new { user.TenantId, user.UserName }).IsUnique().HasFilter("[TenantId] IS NOT NULL");
+            builder.HasIndex(user => new { user.TenantId, user.UserName }).IsUnique().HasFilter("\"TenantId\" IS NOT NULL");
             builder.Property(user => user.PasswordHash).HasMaxLength(256).IsRequired();
             builder.Property(user => user.Role).HasConversion<string>().HasMaxLength(40);
             builder.Property(user => user.Email).HasMaxLength(200);
@@ -119,7 +119,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.Property(log => log.ActionType).HasConversion<string>().HasMaxLength(60);
             builder.Property(log => log.Description).HasMaxLength(500).IsRequired();
             builder.HasIndex(log => log.CreatedAt);
-            builder.HasIndex(log => log.TransactionId).IsUnique().HasFilter("[TransactionId] IS NOT NULL");
+            builder.HasIndex(log => log.TransactionId).IsUnique().HasFilter("\"TransactionId\" IS NOT NULL");
             builder.HasOne(log => log.Tenant).WithMany().HasForeignKey(log => log.TenantId);
         });
 
@@ -129,7 +129,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasKey(setting => setting.Id);
             builder.Property(setting => setting.Key).HasMaxLength(120).IsRequired();
             builder.Property(setting => setting.Value).HasMaxLength(1000).IsRequired();
-            builder.HasIndex(setting => new { setting.TenantId, setting.Key }).IsUnique().HasFilter("[TenantId] IS NOT NULL");
+            builder.HasIndex(setting => new { setting.TenantId, setting.Key }).IsUnique().HasFilter("\"TenantId\" IS NOT NULL");
             builder.HasOne(setting => setting.Tenant).WithMany().HasForeignKey(setting => setting.TenantId);
         });
 
