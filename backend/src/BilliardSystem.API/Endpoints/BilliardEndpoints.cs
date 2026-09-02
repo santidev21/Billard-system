@@ -434,6 +434,7 @@ public static class BilliardEndpoints
             table.SetCode(code);
             dbContext.Tables.Add(table);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await WriteAuditAsync(dbContext, AuditActionType.TableCreated, user.GetUserId(), table.Id, null, null, $"Mesa creada '{table.Name}' (código {table.Code})", tenantId, cancellationToken);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
         }).RequireAuthorization("AdminSession");
 
@@ -556,6 +557,7 @@ public static class BilliardEndpoints
             var product = new Product(category.Id, request.Name.Trim(), request.Price, tenantId.Value);
             dbContext.Products.Add(product);
             await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.ProductCreated, user.GetUserId(), null, null, null, $"Producto creado '{product.Name}' (${product.Price})", tenantId, ct);
             return Results.Ok(new ProductResponse(product.Id, product.Name, product.Price));
         }).RequireAuthorization("AdminSession");
 
@@ -674,8 +676,7 @@ public static class BilliardEndpoints
             var scoreLog = match.AddScore(color, request.Delta, request.UserId);
             dbContext.MatchScoreLogs.Add(scoreLog);
             await dbContext.SaveChangesAsync(ct);
-            await WriteAuditAsync(dbContext, AuditActionType.PlayerScored, request.UserId, table.Id, match.Id, request.TransactionId,
-                $"Carambola {color} {request.Delta:+0;-0;0} -> {scoreLog.ResultingScore}", table.TenantId, ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
             {
@@ -703,6 +704,7 @@ public static class BilliardEndpoints
             match.RenamePlayer("white", request.WhitePlayerName.Trim());
             match.RenamePlayer("yellow", request.YellowPlayerName.Trim());
             await dbContext.SaveChangesAsync(ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerNamesChanged", new
             {
@@ -832,15 +834,20 @@ public static class BilliardEndpoints
             var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id && t.TenantId == tenant.Id, ct);
             if (table is null) return Results.NotFound();
 
-            var consumptionTotal = 0m;
+            var total = 0m;
             if (table.ActiveMatchId is { } activeMatch)
             {
-                consumptionTotal = await dbContext.MatchHistories.Where(h => h.Id == activeMatch).Select(h => h.ConsumptionTotal).FirstOrDefaultAsync(ct);
+                var match = await dbContext.MatchHistories.AsNoTracking().FirstOrDefaultAsync(h => h.Id == activeMatch, ct);
+                var consumptionTotal = match?.ConsumptionTotal ?? 0m;
+                var elapsedSeconds = match is null ? 0 : Math.Max(0, (int)(DateTimeOffset.UtcNow - match.StartedAt).TotalSeconds);
+                var timeCost = match is null ? 0m : Math.Round((elapsedSeconds / 3600m) * match.HourlyRateSnapshot, 2);
+                if (match?.GameMode == GameMode.FreeMode) timeCost = 0;
+                total = timeCost + consumptionTotal;
                 table.MarkCheckRequested(activeMatch);
                 await dbContext.SaveChangesAsync(ct);
-                await WriteAuditAsync(dbContext, AuditActionType.CheckRequested, null, table.Id, activeMatch, null, "Solicitud de cuenta", tenant.Id, ct);
+                await WriteAuditAsync(dbContext, AuditActionType.CheckRequested, null, table.Id, activeMatch, null, $"Solicitud de cuenta en {table.Name} · Total ${total}", tenant.Id, ct);
             }
-            await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("AdminRequest", new { type = "check", tableId = id, tableName = table.Name, total = consumptionTotal, timestamp = DateTimeOffset.UtcNow }, ct);
+            await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("AdminRequest", new { type = "check", tableId = id, tableName = table.Name, total = total, timestamp = DateTimeOffset.UtcNow }, ct);
             return Results.Ok();
         });
 
@@ -868,10 +875,8 @@ public static class BilliardEndpoints
             match.Close(endedAt, tableTotal, match.ConsumptionTotal, null);
             table.EndSession(match.Id, null);
             await dbContext.SaveChangesAsync(ct);
-            if (finalRound is not null)
-                await WriteAuditAsync(dbContext, AuditActionType.RoundCompleted, null, table.Id, match.Id, null,
-                    finalRound.WinnerName is null ? $"Ronda {finalRound.RoundNumber} (cierre) en {table.Name}: empate"
-                        : $"Ronda {finalRound.RoundNumber} (cierre): gana {finalRound.WinnerName}", table.TenantId, ct);
+            await WriteAuditAsync(dbContext, AuditActionType.SessionEnded, null, table.Id, match.Id, request.TransactionId,
+                $"Partida cerrada en {table.Name} · Total ${match.GrandTotal}", table.TenantId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("SessionEnded", new
             {
@@ -897,9 +902,7 @@ public static class BilliardEndpoints
             var round = match.CloseRound(DateTimeOffset.UtcNow);
             dbContext.MatchRounds.Add(round);
             await dbContext.SaveChangesAsync(ct);
-            await WriteAuditAsync(dbContext, AuditActionType.RoundCompleted, request.UserId, table.Id, match.Id, request.TransactionId,
-                round.WinnerName is null ? $"Ronda {round.RoundNumber} en {table.Name}: empate"
-                    : $"Ronda {round.RoundNumber}: gana {round.WinnerName}", table.TenantId, ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
             {
@@ -940,13 +943,26 @@ public static class BilliardEndpoints
         api.MapGet("/matches", async (BilliardDbContext dbContext, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var tenantId = user.GetTenantId();
-            var matches = await dbContext.MatchHistories.AsNoTracking()
+            var raw = await dbContext.MatchHistories.AsNoTracking()
                 .Where(h => h.TenantId == tenantId)
                 .OrderByDescending(h => h.StartedAt)
-                .Select(h => new MatchListItemResponse(h.Id, h.TableId, h.WhitePlayerName, h.YellowPlayerName,
-                    h.WhiteScore, h.YellowScore, h.TotalCarambolas, h.GameMode.ToString(),
-                    h.StartedAt, h.EndedAt, h.GrandTotal))
+                .Select(h => new
+                {
+                    h.Id,
+                    h.TableId,
+                    h.WhitePlayerName,
+                    h.YellowPlayerName,
+                    WhiteTotal = h.Rounds.Sum(r => r.WhiteScore) + (h.EndedAt == null ? h.WhiteScore : 0),
+                    YellowTotal = h.Rounds.Sum(r => r.YellowScore) + (h.EndedAt == null ? h.YellowScore : 0),
+                    h.GameMode,
+                    h.StartedAt,
+                    h.EndedAt,
+                    h.GrandTotal
+                })
                 .ToListAsync(ct);
+            var matches = raw.Select(m => new MatchListItemResponse(m.Id, m.TableId, m.WhitePlayerName, m.YellowPlayerName,
+                m.WhiteTotal, m.YellowTotal, m.WhiteTotal + m.YellowTotal, m.GameMode.ToString(),
+                m.StartedAt, m.EndedAt, m.GrandTotal)).ToList();
             return Results.Ok(matches);
         }).RequireAuthorization("AdminSession");
 
@@ -1079,7 +1095,17 @@ public static class BilliardEndpoints
     }
 
     private static async Task<bool> IsIdempotentAsync(BilliardDbContext dbContext, Guid? transactionId, CancellationToken ct)
-        => transactionId is not null && await dbContext.AuditLogs.AnyAsync(l => l.TransactionId == transactionId, ct);
+        => transactionId is not null
+           && (await dbContext.AuditLogs.AnyAsync(l => l.TransactionId == transactionId, ct)
+               || await dbContext.IdempotencyKeys.AnyAsync(k => k.TransactionId == transactionId, ct));
+
+    private static async Task MarkIdempotentAsync(BilliardDbContext dbContext, Guid? transactionId, CancellationToken ct)
+    {
+        if (transactionId is null) return;
+        if (await dbContext.IdempotencyKeys.AnyAsync(k => k.TransactionId == transactionId, ct)) return;
+        dbContext.IdempotencyKeys.Add(new IdempotencyKey(transactionId.Value));
+        try { await dbContext.SaveChangesAsync(ct); } catch { /* duplicate */ }
+    }
 
     private static async Task WriteAuditAsync(BilliardDbContext dbContext, AuditActionType actionType,
         Guid? userId, Guid? tableId, Guid? matchId, Guid? transactionId, string description,

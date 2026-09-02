@@ -1,7 +1,7 @@
 <section class="dash">
   <div class="notif-panel">
     @for (n of notifications(); track n.id) {
-      <div class="notif" [class.check]="n.type === 'check'">{{ n.text }}</div>
+      <div class="notif" [class.check]="n.type === 'check'"><span>{{ n.text }}</span><button class="notif-x" (click)="dismissNotification(n.id)">✕</button></div>
     }
   </div>
 

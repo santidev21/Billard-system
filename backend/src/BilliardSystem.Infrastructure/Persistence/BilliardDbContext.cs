@@ -17,6 +17,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
     }
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<BilliardTable> Tables => Set<BilliardTable>();
     public DbSet<MatchConsumption> MatchConsumptions => Set<MatchConsumption>();
@@ -121,6 +122,14 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
             builder.HasIndex(log => log.CreatedAt);
             builder.HasIndex(log => log.TransactionId).IsUnique().HasFilter("\"TransactionId\" IS NOT NULL");
             builder.HasOne(log => log.Tenant).WithMany().HasForeignKey(log => log.TenantId);
+        });
+
+        modelBuilder.Entity<IdempotencyKey>(builder =>
+        {
+            builder.ToTable("IdempotencyKeys");
+            builder.HasKey(k => k.Id);
+            builder.Property(k => k.TransactionId).IsRequired();
+            builder.HasIndex(k => k.TransactionId).IsUnique();
         });
 
         modelBuilder.Entity<AppSetting>(builder =>

@@ -111,6 +111,24 @@ docker compose up -d billard
 docker network connect billard-net gateway
 ```
 
+### Docker Dev (test the current code in Docker)
+
+Whenever you want to test the current code in Docker (front + back are baked into the image):
+
+```bash
+# rebuild and start (reuses existing DB)
+docker compose up -d --build
+
+# clean state: wipes DB volume and re-seeds Demo/M1 (requires .env)
+docker compose down -v && docker compose up -d --build
+
+# verify
+docker compose ps
+docker logs -f billard
+docker exec billard-system-db-1 psql -U postgres -d billard -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
+# app at http://127.0.0.1:5000
+```
+
 ## Project Structure
 
 ```

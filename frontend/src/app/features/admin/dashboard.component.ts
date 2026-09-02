@@ -28,7 +28,7 @@ export class DashboardComponent implements OnInit {
   readonly summary = signal<DashboardSummary | null>(null);
   readonly topProducts = signal<TopProduct[]>([]);
   readonly details = signal<Record<string, TableDetail>>({});
-  readonly notifications = signal<{ id: string; text: string; type: string }[]>([]);
+  readonly notifications = signal<{ id: string; text: string; type: string; tableId: string }[]>([]);
   readonly showAddTable = signal(false);
   readonly showRateCard = signal(false);
   readonly selectedTable = signal<TableDetail | null>(null);
@@ -200,9 +200,13 @@ export class DashboardComponent implements OnInit {
     const text = n.type === 'waiter'
       ? `${n.tableName} solicita mesero`
       : `${n.tableName} pide cuenta · Total $${fmtMoney(n.total ?? 0)}`;
-    const entry = { id: String(++this.notifId), text, type: n.type };
+    const entry = { id: String(++this.notifId), text, type: n.type, tableId: n.tableId };
     this.notifications.update((list) => [entry, ...list].slice(0, 6));
     setTimeout(() => this.notifications.update((list) => list.filter((x) => x.id !== entry.id)), 9000);
+  }
+
+  dismissNotification(id: string): void {
+    this.notifications.update((list) => list.filter((x) => x.id !== id));
   }
 
   statusDot(status: string): string {
@@ -243,6 +247,7 @@ export class DashboardComponent implements OnInit {
     } catch {
       // petición ya resuelta
     }
+    this.notifications.update((list) => list.filter((x) => x.tableId !== tableId));
     await this.refresh();
     const sel = this.selectedTable();
     if (sel) {
