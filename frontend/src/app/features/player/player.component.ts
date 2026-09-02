@@ -190,7 +190,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         } else {
           await this.autoSelectTable(slug);
           await this.loadProductsForSlug(slug);
-          if (this.gameMode() === 'FreeMode' && this.tableId() && !this.running()) {
+          if (this.gameMode() === 'FreeMode' && this.tableId()) {
             const tableId = this.tableId();
             try {
               const detail = await this.api.getTenantTable(slug, tableId);
@@ -207,7 +207,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.gameMode.set('FreeMode');
         await this.autoSelectTable('demo');
         await this.loadProductsForSlug('demo');
-        if (this.tableId() && !this.running()) {
+        if (this.tableId()) {
           try {
             const detail = await this.api.getTenantTable('demo', this.tableId());
             const shouldStart = !detail.activeMatch || detail.activeMatch.gameMode === 'FreeMode';
@@ -391,9 +391,17 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.yellowName.set(m.yellowPlayerName);
     this.whiteScore.set(m.whiteScore);
     this.yellowScore.set(m.yellowScore);
-    this.startedAt.set(new Date(m.startedAt).getTime());
+    const serverStart = new Date(m.startedAt).getTime();
+    const currentStart = this.startedAt();
+    // monotonic guard: don't let a stale poll (old StartedAt) overwrite a just-started session (00:00 -> old time bug in FreeMode)
+    if (currentStart === null || serverStart > currentStart || m.roundNumber > this.roundNumber()) {
+      this.startedAt.set(serverStart);
+    } else if (serverStart !== currentStart && currentStart !== null && Math.abs(serverStart - currentStart) < 5000) {
+      // small clock skew (server vs client Date.now) — sync to server
+      this.startedAt.set(serverStart);
+    }
     // round timer: start from last round's end or match start — monotonic to avoid stale poll overwriting a just-closed round (00:00 -> 00:41 bug)
-    const lastRoundEnd = m.rounds.length > 0 ? new Date(m.rounds[m.rounds.length - 1].endedAt).getTime() : new Date(m.startedAt).getTime();
+    const lastRoundEnd = m.rounds.length > 0 ? new Date(m.rounds[m.rounds.length - 1].endedAt).getTime() : serverStart;
     const currentRoundStart = this.roundStartedAt();
     if (currentRoundStart === null || lastRoundEnd > currentRoundStart) {
       this.roundStartedAt.set(lastRoundEnd);
