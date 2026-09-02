@@ -25,6 +25,9 @@ jobs:
           sed -i 's/\r$//' ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null 2>&1 || { echo "Deploy key invalid - check VPS_SSH_PRIVATE_KEY secret"; exit 1; }
+          echo "Key fingerprint in secret:"
+          ssh-keygen -l -f ~/.ssh/deploy_key
+          echo "Expected: 256 SHA256:t5qWIdx3FSMY9di2mzBRQIcMi/TAbFbgMTloXH7E6Ow santidev21@VPS (id_ed25519_vps)"
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Deploy to VPS
