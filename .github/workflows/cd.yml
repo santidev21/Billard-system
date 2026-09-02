@@ -10,22 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          # Accept both raw private key and base64-encoded key
-          printf '%s' "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > /tmp/_key_input
-          if grep -q "BEGIN OPENSSH PRIVATE KEY" /tmp/_key_input 2>/dev/null || grep -q "BEGIN RSA PRIVATE KEY" /tmp/_key_input 2>/dev/null; then
-            cp /tmp/_key_input ~/.ssh/deploy_key
+          # Raw private key or base64 (handles multiline secrets safely)
+          if printf '%s\n' "$SSH_DEPLOY_KEY" | grep -q '^-----BEGIN'; then
+            printf '%s\n' "$SSH_DEPLOY_KEY" > ~/.ssh/deploy_key
           else
-            base64 -d /tmp/_key_input > ~/.ssh/deploy_key 2>/dev/null || cp /tmp/_key_input ~/.ssh/deploy_key
+            printf '%s\n' "$SSH_DEPLOY_KEY" | base64 -d > ~/.ssh/deploy_key
           fi
-          # Fix Windows CRLF if pasted from PowerShell
+          # Strip Windows CRLF
           sed -i 's/\r$//' ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null || (echo "Deploy key invalid - check VPS_SSH_PRIVATE_KEY secret" && cat ~/.ssh/deploy_key | head -1 && exit 1)
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-          rm -f /tmp/_key_input
+          ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null 2>&1 || { echo "Deploy key invalid - check VPS_SSH_PRIVATE_KEY secret"; exit 1; }
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Deploy to VPS
         env:
