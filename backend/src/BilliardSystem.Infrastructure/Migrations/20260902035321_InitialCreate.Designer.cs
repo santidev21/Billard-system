@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BilliardSystem.Infrastructure.Migrations
 {
     [DbContext(typeof(BilliardDbContext))]
-    [Migration("20260902002705_InitialCreate")]
+    [Migration("20260902035321_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -117,7 +117,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                             Id = new Guid("40000000-0000-0000-0000-000000000003"),
                             Key = "AdminPassword",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Value = "v2.BM/Xkdcxa8LiNQIsaHJvrDTTWS1sJis/Q8ocQ1P7f0M=.4C+pIn31rkL5XxXsoKvJFsrGsrqJU8/6u7sTu6D0s2k="
+                            Value = "v2./69jQ5ktXiudDc6z+hTg2/V5BQTbXb5Nw0+qya8zcXc=.lElFgK+XGj4GKaqFbOrfwZPVr8+o55WnWoOnlltG13k="
                         },
                         new
                         {
@@ -585,6 +585,9 @@ namespace BilliardSystem.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -618,7 +621,8 @@ namespace BilliardSystem.Infrastructure.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Super Admin",
                             IsActive = true,
-                            PasswordHash = "v2.vjWPdK7EVqbdh/6weZfHQDe2AOvTJ22SdRPfU9hKS5E=.AisAaA487LYeXDWFSPBd0dcwSi9vipiBl0ws9A0LUoE=",
+                            MustChangePassword = false,
+                            PasswordHash = "v2.GOnB5HfSBQFflA94xhKpcFB2g6e8T3IX1PqR7/q4DUM=.vtqDQzBDi9WYStn0IuShJ0SXsRpIBDCTBgFPJsbnu5s=",
                             Role = "SuperAdmin",
                             UserName = "superadmin"
                         });

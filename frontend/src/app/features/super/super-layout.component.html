@@ -22,6 +22,20 @@
       <button class="btn btn-primary" [disabled]="!newLocalName.trim()" (click)="createLocal()">Crear local</button>
     </div>
 
+    @if (createdLocal(); as c) {
+      <div class="created-banner glass">
+        <div class="banner-header">
+          <strong>Local creado</strong>
+          <button class="btn btn-outline mini" (click)="dismissCreated()">✕</button>
+        </div>
+        <p>Credenciales para que el local ingrese:</p>
+        <div class="credential-row"><span>Nombre del local:</span><code>{{ c.name }}</code></div>
+        <div class="credential-row"><span>Usuario:</span><code>{{ c.slug }}</code></div>
+        <div class="credential-row"><span>Clave:</span><code>{{ c.password }}</code></div>
+        <p class="banner-hint">Puedes usar el nombre del local O el usuario para iniciar sesión.</p>
+      </div>
+    }
+
     <div class="locals-grid">
       @for (local of locals(); track local.id) {
         <div class="local-card glass">

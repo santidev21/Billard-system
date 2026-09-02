@@ -33,6 +33,10 @@ export class AdminLayoutComponent implements OnInit {
   constructor() {}
 
   async ngOnInit(): Promise<void> {
+    if (this.auth.mustChangePassword()) {
+      await this.router.navigate(['/force-password']);
+      return;
+    }
     this.tenantName.set(this.auth.getUser()?.tenantName ?? null);
     effect(() => {
       const n = this.signalr.adminNotification();

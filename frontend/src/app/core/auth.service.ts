@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { UserInfo } from './models';
+import { LoginResponse, UserInfo } from './models';
 
 const ACCESS_KEY = 'billiard-access-token';
 const REFRESH_KEY = 'billiard-refresh-token';
@@ -38,7 +38,11 @@ export class AuthService {
     return this.getUser()?.role === 'SuperAdmin';
   }
 
-  async login(userName: string, password: string): Promise<void> {
+  mustChangePassword(): boolean {
+    return this.getUser()?.mustChangePassword === true;
+  }
+
+  async login(userName: string, password: string): Promise<LoginResponse> {
     const res = await this.api.login(userName, password);
     localStorage.setItem(ACCESS_KEY, res.accessToken);
     localStorage.setItem(REFRESH_KEY, res.refreshToken);
@@ -47,7 +51,9 @@ export class AuthService {
       role: res.role,
       tenantName: res.tenantName,
       tenantSlug: res.tenantSlug,
+      mustChangePassword: res.mustChangePassword,
     } as UserInfo));
+    return res;
   }
 
   async refresh(): Promise<void> {
@@ -63,6 +69,20 @@ export class AuthService {
       role: res.role,
       tenantName: res.tenantName,
       tenantSlug: res.tenantSlug,
+      mustChangePassword: res.mustChangePassword,
+    } as UserInfo));
+  }
+
+  async forceChangePassword(newPassword: string): Promise<void> {
+    const res = await this.api.forceChangePassword(newPassword);
+    localStorage.setItem(ACCESS_KEY, res.accessToken);
+    localStorage.setItem(REFRESH_KEY, res.refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify({
+      name: res.userName,
+      role: res.role,
+      tenantName: res.tenantName,
+      tenantSlug: res.tenantSlug,
+      mustChangePassword: res.mustChangePassword,
     } as UserInfo));
   }
 

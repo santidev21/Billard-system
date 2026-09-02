@@ -26,6 +26,7 @@ export class SuperLayoutComponent implements OnInit {
   readonly loading = signal(false);
   readonly revealedCode = signal<string | null>(null);
   readonly revealedId = signal<string | null>(null);
+  readonly createdLocal = signal<{ name: string; slug: string; password: string } | null>(null);
 
   newLocalName = '';
   newLocalPassword = '';
@@ -75,7 +76,8 @@ export class SuperLayoutComponent implements OnInit {
     }
     this.loading.set(true);
     try {
-      await this.api.createLocal(this.newLocalName.trim(), this.newLocalPassword.trim() || undefined);
+      const res = await this.api.createLocal(this.newLocalName.trim(), this.newLocalPassword.trim() || undefined);
+      this.createdLocal.set({ name: res.name, slug: res.slug, password: res.defaultPassword });
       this.newLocalName = '';
       this.newLocalPassword = '';
       await this.loadLocales();
@@ -84,6 +86,10 @@ export class SuperLayoutComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  dismissCreated(): void {
+    this.createdLocal.set(null);
   }
 
   async revealCode(id: string): Promise<void> {

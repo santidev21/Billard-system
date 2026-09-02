@@ -129,6 +129,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                     TenantId = table.Column<Guid>(type: "uuid", nullable: true),
                     Email = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    MustChangePassword = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -350,7 +351,7 @@ namespace BilliardSystem.Infrastructure.Migrations
                 {
                     { new Guid("40000000-0000-0000-0000-000000000001"), "ReplayBufferSeconds", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "60" },
                     { new Guid("40000000-0000-0000-0000-000000000002"), "BusinessName", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Billar Tres Bandas" },
-                    { new Guid("40000000-0000-0000-0000-000000000003"), "AdminPassword", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "v2.BM/Xkdcxa8LiNQIsaHJvrDTTWS1sJis/Q8ocQ1P7f0M=.4C+pIn31rkL5XxXsoKvJFsrGsrqJU8/6u7sTu6D0s2k=" },
+                    { new Guid("40000000-0000-0000-0000-000000000003"), "AdminPassword", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "v2./69jQ5ktXiudDc6z+hTg2/V5BQTbXb5Nw0+qya8zcXc=.lElFgK+XGj4GKaqFbOrfwZPVr8+o55WnWoOnlltG13k=" },
                     { new Guid("40000000-0000-0000-0000-000000000004"), "HourlyRate", null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "12000" }
                 });
 
@@ -361,8 +362,8 @@ namespace BilliardSystem.Infrastructure.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "CreatedAt", "DisplayName", "Email", "IsActive", "PasswordHash", "Role", "TenantId", "UserName" },
-                values: new object[] { new Guid("99999999-0000-0000-0000-000000000099"), new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Super Admin", null, true, "v2.vjWPdK7EVqbdh/6weZfHQDe2AOvTJ22SdRPfU9hKS5E=.AisAaA487LYeXDWFSPBd0dcwSi9vipiBl0ws9A0LUoE=", "SuperAdmin", null, "superadmin" });
+                columns: new[] { "Id", "CreatedAt", "DisplayName", "Email", "IsActive", "MustChangePassword", "PasswordHash", "Role", "TenantId", "UserName" },
+                values: new object[] { new Guid("99999999-0000-0000-0000-000000000099"), new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "Super Admin", null, true, false, "v2.GOnB5HfSBQFflA94xhKpcFB2g6e8T3IX1PqR7/q4DUM=.vtqDQzBDi9WYStn0IuShJ0SXsRpIBDCTBgFPJsbnu5s=", "SuperAdmin", null, "superadmin" });
 
             migrationBuilder.InsertData(
                 table: "Categories",

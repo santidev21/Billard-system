@@ -27,9 +27,11 @@ public sealed class User : Entity
     public Tenant? Tenant { get; private set; }
     public string? Email { get; private set; }
     public bool IsActive { get; private set; } = true;
+    public bool MustChangePassword { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
     public void SetEmail(string? email) => Email = email;
     public void SetTenantId(Guid tenantId) => TenantId = tenantId;
     public void SetPassword(string passwordHash) => PasswordHash = passwordHash;
+    public void ClearMustChangePassword() => MustChangePassword = false;
 }

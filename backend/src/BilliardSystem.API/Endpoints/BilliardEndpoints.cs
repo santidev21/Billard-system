@@ -45,7 +45,7 @@ public static class BilliardEndpoints
 
             var user = await dbContext.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserName == request.UserName && u.IsActive, cancellationToken);
+                .FirstOrDefaultAsync(u => (u.UserName == request.UserName || u.DisplayName == request.UserName) && u.IsActive, cancellationToken);
 
             if (user is null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
             {
@@ -56,7 +56,7 @@ public static class BilliardEndpoints
             {
                 var (accessToken, refreshToken) = await CreateTokenPairAsync(dbContext, config, user, null);
                 await dbContext.SaveChangesAsync(cancellationToken);
-                return Results.Ok(new LoginResponse(accessToken, refreshToken, user.DisplayName, user.Role.ToString(), null, null));
+                return Results.Ok(new LoginResponse(accessToken, refreshToken, user.DisplayName, user.Role.ToString(), null, null, false));
             }
 
             if (user.TenantId is null)
@@ -67,7 +67,7 @@ public static class BilliardEndpoints
             var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == user.TenantId, cancellationToken);
             var (userAccessToken, userRefreshToken) = await CreateTokenPairAsync(dbContext, config, user, user.TenantId);
             await dbContext.SaveChangesAsync(cancellationToken);
-            return Results.Ok(new LoginResponse(userAccessToken, userRefreshToken, user.DisplayName, user.Role.ToString(), tenant?.Name, tenant?.Slug));
+            return Results.Ok(new LoginResponse(userAccessToken, userRefreshToken, user.DisplayName, user.Role.ToString(), tenant?.Name, tenant?.Slug, user.MustChangePassword));
         }).RequireRateLimiting("Login");
 
         api.MapPost("/auth/refresh", async (
@@ -120,6 +120,40 @@ public static class BilliardEndpoints
             return Results.Ok(new { ok = true });
         });
 
+        api.MapPost("/auth/force-change-password", async (
+            ChangePasswordRequest request,
+            BilliardDbContext dbContext,
+            IConfiguration config,
+            ClaimsPrincipal userPrincipal,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+            {
+                return Results.BadRequest(new { message = "La nueva clave debe tener al menos 8 caracteres." });
+            }
+
+            var userId = userPrincipal.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
+
+            var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            user.SetPassword(PasswordHasher.Hash(request.NewPassword));
+            user.ClearMustChangePassword();
+            await dbContext.Sessions.Where(s => s.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            var (accessToken, refreshToken) = await CreateTokenPairAsync(dbContext, config, user, user.TenantId);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            var tenant = user.TenantId.HasValue
+                ? await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == user.TenantId, cancellationToken)
+                : null;
+            return Results.Ok(new LoginResponse(accessToken, refreshToken, user.DisplayName, user.Role.ToString(), tenant?.Name, tenant?.Slug, false));
+        }).RequireAuthorization("AdminSession");
+
         api.MapPost("/auth/change-password", async (
             ChangePasswordRequest request,
             BilliardDbContext dbContext,
@@ -153,7 +187,7 @@ public static class BilliardEndpoints
             }
 
             var user = await dbContext.Users.FirstOrDefaultAsync(
-                u => u.UserName == request.UserName && u.IsActive, cancellationToken);
+                u => (u.UserName == request.UserName || u.DisplayName == request.UserName) && u.IsActive, cancellationToken);
 
             if (user is null || user.TenantId is null)
             {
@@ -191,7 +225,7 @@ public static class BilliardEndpoints
             }
 
             var user = await dbContext.Users.FirstOrDefaultAsync(
-                u => u.UserName == request.UserName && u.IsActive, cancellationToken);
+                u => (u.UserName == request.UserName || u.DisplayName == request.UserName) && u.IsActive, cancellationToken);
             if (user is null)
             {
                 return Results.BadRequest(new { message = "Código inválido o expirado." });
@@ -240,8 +274,9 @@ public static class BilliardEndpoints
             dbContext.Tenants.Add(tenant);
             await dbContext.SaveChangesAsync(ct);
 
-            var defaultPassword = request.InitialPassword ?? "admin123";
+            var defaultPassword = string.IsNullOrWhiteSpace(request.InitialPassword) ? "admin123" : request.InitialPassword;
             var user = new User(request.Name, tenant.Slug, PasswordHasher.Hash(defaultPassword), UserRole.Administrator, tenant.Id);
+            user.ClearMustChangePassword();
             dbContext.Users.Add(user);
 
             var table = new BilliardTable("Mesa 1", 12000m, tenant.Id);
@@ -249,7 +284,7 @@ public static class BilliardEndpoints
             dbContext.Tables.Add(table);
             await dbContext.SaveChangesAsync(ct);
 
-            return Results.Ok(new LocalResponse(tenant.Id, tenant.Name, tenant.Slug, true, 1, 1));
+            return Results.Ok(new CreateLocalResponse(tenant.Id, tenant.Name, tenant.Slug, defaultPassword));
         });
 
         super.MapGet("/recoveries", async (BilliardDbContext dbContext, CancellationToken ct) =>
@@ -964,7 +999,7 @@ public sealed record MatchDetailResponse(Guid Id, string WhitePlayerName, string
 public sealed record TableDetailResponse(Guid Id, string Name, string Code, string Status, decimal HourlyRate, bool IsActive, Guid? ActiveMatchId, MatchDetailResponse? ActiveMatch);
 
 public sealed record LoginRequest(string? UserName, string? Password);
-public sealed record LoginResponse(string AccessToken, string RefreshToken, string UserName, string Role, string? TenantName, string? TenantSlug);
+public sealed record LoginResponse(string AccessToken, string RefreshToken, string UserName, string Role, string? TenantName, string? TenantSlug, bool MustChangePassword);
 public sealed record RefreshRequest(string? RefreshToken);
 public sealed record ChangePasswordRequest(Guid UserId, string? CurrentPassword, string? NewPassword);
 public sealed record ForgotPasswordRequest(string? UserName);
@@ -992,6 +1027,7 @@ public sealed record MatchListItemResponse(Guid Id, Guid TableId, string WhitePl
 public sealed record TopProductResponse(string Name, int Quantity, decimal Total);
 public sealed record AuditLogResponse(Guid Id, string ActionType, string Description, Guid? UserId, Guid? TableId, Guid? MatchId, Guid? TransactionId, DateTimeOffset CreatedAt);
 public sealed record LocalResponse(Guid Id, string Name, string Slug, bool IsActive, int TableCount, int UserCount);
+public sealed record CreateLocalResponse(Guid Id, string Name, string Slug, string DefaultPassword);
 public sealed record CreateLocalRequest(string Name, string? InitialPassword = null);
 public sealed record RecoveryCodeResponse(Guid Id, string TenantName, string UserName, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt);
 

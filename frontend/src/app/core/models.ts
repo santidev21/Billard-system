@@ -105,6 +105,7 @@ export interface UserInfo {
   role: string;
   tenantName: string | null;
   tenantSlug: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface LoginResponse {
@@ -114,6 +115,7 @@ export interface LoginResponse {
   role: string;
   tenantName: string | null;
   tenantSlug: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface LocalInfo {

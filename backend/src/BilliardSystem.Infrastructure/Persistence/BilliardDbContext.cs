@@ -230,6 +230,7 @@ public sealed class BilliardDbContext : DbContext, IBilliardDbContext
                 TenantId = (Guid?)null,
                 Email = (string?)null,
                 IsActive = true,
+                MustChangePassword = false,
                 CreatedAt = seedDate
             }
         );

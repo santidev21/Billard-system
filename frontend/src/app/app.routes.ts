@@ -7,6 +7,7 @@ export const routes: Routes = [
   { path: 'play', loadComponent: () => import('./features/player/player.component').then(m => m.PlayerComponent) },
   { path: 'forgot-password', loadComponent: () => import('./features/login/forgot-password.component').then(m => m.ForgotPasswordComponent) },
   { path: 'reset-password', loadComponent: () => import('./features/login/reset-password.component').then(m => m.ResetPasswordComponent) },
+  { path: 'force-password', loadComponent: () => import('./features/login/force-password.component').then(m => m.ForcePasswordComponent) },
   { path: 't/:slug/play', loadComponent: () => import('./features/player/player.component').then(m => m.PlayerComponent) },
   { path: 't/:slug/tables/:id', loadComponent: () => import('./features/player/player.component').then(m => m.PlayerComponent) },
   { path: 'admin', canActivate: [AuthGuard], loadComponent: () => import('./features/admin/admin-layout.component').then(m => m.AdminLayoutComponent), children: [

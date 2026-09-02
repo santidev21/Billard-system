@@ -25,8 +25,10 @@ export class LoginComponent {
     this.error.set(null);
     this.loading.set(true);
     try {
-      await this.auth.login(this.userName, this.password);
-      if (this.auth.isSuperAdmin()) {
+      const res = await this.auth.login(this.userName, this.password);
+      if (res.mustChangePassword) {
+        await this.router.navigate(['/force-password']);
+      } else if (this.auth.isSuperAdmin()) {
         await this.router.navigate(['/super']);
       } else {
         await this.router.navigate(['/admin']);
