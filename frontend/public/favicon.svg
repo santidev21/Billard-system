@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="16" fill="#1E2F2F"/>
+  <!-- White ball (top) -->
+  <circle cx="50" cy="28" r="22" fill="#F8FAFC"/>
+  <ellipse cx="42" cy="20" rx="6" ry="4" fill="white" opacity="0.95"/>
+  <circle cx="50" cy="28" r="22" fill="none" stroke="#E2E8F0" stroke-width="1" opacity="0.15"/>
+  <!-- Red ball (bottom left) -->
+  <circle cx="28" cy="68" r="22" fill="#DC2626"/>
+  <ellipse cx="20" cy="60" rx="5" ry="3.5" fill="white" opacity="0.92" transform="rotate(-18 20 60)"/>
+  <!-- Yellow ball (bottom right) -->
+  <circle cx="72" cy="68" r="22" fill="#EAB308"/>
+  <ellipse cx="64" cy="60" rx="5" ry="3.5" fill="white" opacity="0.92" transform="rotate(-18 64 60)"/>
+</svg>
