@@ -25,7 +25,7 @@ services:
         condition: service_healthy
     environment:
       - AllowedHosts=billard.santidev21.tech;localhost
-      - ConnectionStrings__BilliardDatabase=Host=db;Database=billiard;Username=billard;Password=${POSTGRES_PASSWORD}
+      - ConnectionStrings__BilliardDatabase=Host=db;Database=billiard;Username=billard;Password=${POSTGRES_PASSWORD};SslMode=Disable
       - Jwt__Key=${JWT_KEY}
       - Super__UserName=${SUPER_USERNAME}
       - Super__Password=${SUPER_PASSWORD}

@@ -16,7 +16,7 @@ COPY backend/src/BilliardSystem.Domain/BilliardSystem.Domain.csproj src/Billiard
 COPY backend/src/BilliardSystem.Infrastructure/BilliardSystem.Infrastructure.csproj src/BilliardSystem.Infrastructure/
 RUN dotnet restore src/BilliardSystem.API/BilliardSystem.API.csproj
 COPY backend/src/ src/
-RUN dotnet publish src/BilliardSystem.API/BilliardSystem.API.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/BilliardSystem.API/BilliardSystem.API.csproj -c Release -o /app/publish
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
