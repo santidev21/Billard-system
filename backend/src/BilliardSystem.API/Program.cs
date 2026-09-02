@@ -17,6 +17,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 builder.Services.AddInfrastructure(builder.Configuration);
