@@ -1,10 +1,11 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: ['*']
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -34,3 +35,45 @@ jobs:
         working-directory: frontend
       - run: npm run build -- --configuration production
         working-directory: frontend
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - name: Setup SSH
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # Raw private key or base64 (handles multiline secrets safely)
+          if printf '%s\n' "$SSH_DEPLOY_KEY" | grep -q '^-----BEGIN'; then
+            printf '%s\n' "$SSH_DEPLOY_KEY" > ~/.ssh/deploy_key
+          else
+            printf '%s\n' "$SSH_DEPLOY_KEY" | base64 -d > ~/.ssh/deploy_key
+          fi
+          # Strip Windows CRLF
+          sed -i 's/\r$//' ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -l -f ~/.ssh/deploy_key >/dev/null 2>&1 || { echo "Deploy key invalid - check VPS_SSH_PRIVATE_KEY secret"; exit 1; }
+          echo "Key fingerprint in secret:"
+          ssh-keygen -l -f ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy to VPS
+        env:
+          SSH_KEY: ~/.ssh/deploy_key
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" \
+            'cd /opt/billard && chmod +x ./deploy/deploy.sh && ./deploy/deploy.sh deploy'
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+      - name: Deployment summary
+        if: success()
+        run: echo "Deployed commit ${{ github.sha }} via deploy.sh"
