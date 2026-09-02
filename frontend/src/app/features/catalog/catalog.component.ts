@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { Product } from '../../core/models';
 import { fmtMoney } from '../../core/format';
 import { SpinnerComponent } from '../../shared/spinner.component';
@@ -15,6 +16,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 })
 export class CatalogComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
 
   readonly fmtMoney = fmtMoney;
 
@@ -30,7 +32,12 @@ export class CatalogComponent implements OnInit {
   private async reload(): Promise<void> {
     this.loading.set(true);
     try {
-      this.products.set(await this.api.getProducts());
+      const slug = this.auth.getTenantSlug();
+      if (slug) {
+        this.products.set(await this.api.getTenantProducts(slug));
+      } else {
+        this.products.set(await this.api.getProducts());
+      }
     } finally {
       this.loading.set(false);
     }

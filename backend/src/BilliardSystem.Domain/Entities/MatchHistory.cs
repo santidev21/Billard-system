@@ -49,6 +49,9 @@ public sealed class MatchHistory : Entity
 
     public int TotalCarambolas => WhiteScore + YellowScore;
 
+    private DateTimeOffset CurrentRoundStart =>
+        _rounds.Count == 0 ? StartedAt : _rounds.OrderBy(r => r.RoundNumber).Last().EndedAt;
+
     public MatchScoreLog AddScore(string playerColor, int delta, Guid? userId)
     {
         var color = playerColor.Equals("yellow", StringComparison.OrdinalIgnoreCase)
@@ -121,7 +124,7 @@ public sealed class MatchHistory : Entity
         ClosedByUserId = closedByUserId;
     }
 
-    public MatchRound CloseRound()
+    public MatchRound CloseRound(DateTimeOffset endedAt)
     {
         RoundNumber += 1;
         var winnerName = WhiteScore > YellowScore
@@ -130,15 +133,32 @@ public sealed class MatchHistory : Entity
                 ? YellowPlayerName
                 : null;
 
-        var startedAt = _rounds.Count == 0
-            ? StartedAt
-            : _rounds[^1].EndedAt;
-        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName, startedAt);
+        var startedAt = CurrentRoundStart;
+        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName, startedAt, endedAt);
         _rounds.Add(round);
 
         WhiteScore = 0;
         YellowScore = 0;
         _scoreLogs.Clear();
+        return round;
+    }
+
+    public MatchRound? TryCloseFinalRound(DateTimeOffset endedAt)
+    {
+        var startedAt = CurrentRoundStart;
+        var elapsedSeconds = Math.Max(0, (int)(endedAt - startedAt).TotalSeconds);
+        if (elapsedSeconds < 1)
+            return null;
+
+        RoundNumber += 1;
+        var winnerName = WhiteScore > YellowScore
+            ? WhitePlayerName
+            : YellowScore > WhiteScore
+                ? YellowPlayerName
+                : null;
+
+        var round = new MatchRound(Id, RoundNumber, WhiteScore, YellowScore, winnerName, startedAt, endedAt);
+        _rounds.Add(round);
         return round;
     }
 }

@@ -8,7 +8,7 @@ public sealed class MatchRound : Entity
     {
     }
 
-    public MatchRound(Guid matchHistoryId, int roundNumber, int whiteScore, int yellowScore, string? winnerName, DateTimeOffset startedAt)
+    public MatchRound(Guid matchHistoryId, int roundNumber, int whiteScore, int yellowScore, string? winnerName, DateTimeOffset startedAt, DateTimeOffset endedAt)
     {
         MatchHistoryId = matchHistoryId;
         RoundNumber = roundNumber;
@@ -16,6 +16,8 @@ public sealed class MatchRound : Entity
         YellowScore = yellowScore;
         WinnerName = winnerName;
         StartedAt = startedAt;
+        EndedAt = endedAt;
+        DurationSeconds = Math.Max(0, (int)(EndedAt - StartedAt).TotalSeconds);
     }
 
     public Guid MatchHistoryId { get; private set; }
@@ -25,6 +27,7 @@ public sealed class MatchRound : Entity
     public int YellowScore { get; private set; }
     public string? WinnerName { get; private set; }
     public DateTimeOffset StartedAt { get; private set; }
-    public DateTimeOffset EndedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset EndedAt { get; private set; }
+    public int DurationSeconds { get; private set; }
     public TimeSpan Duration => EndedAt - StartedAt;
 }

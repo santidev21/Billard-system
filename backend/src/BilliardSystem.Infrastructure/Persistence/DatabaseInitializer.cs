@@ -14,6 +14,7 @@ public static class DatabaseInitializer
 
         await SeedSuperUserAsync(dbContext);
         await SeedDemoTenantAsync(dbContext);
+        await SeedDefaultProductsForExistingTenantsAsync(dbContext);
     }
 
     private static async Task SeedSuperUserAsync(BilliardDbContext dbContext)
@@ -70,6 +71,38 @@ public static class DatabaseInitializer
                 dbContext.Settings.Add(new Domain.Entities.AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
             }
 
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private static async Task SeedDefaultProductsForExistingTenantsAsync(BilliardDbContext dbContext)
+    {
+        var tenants = await dbContext.Tenants.ToListAsync();
+        foreach (var tenant in tenants)
+        {
+            if (tenant.Slug == "demo")
+            {
+                continue;
+            }
+            if (await dbContext.Categories.AnyAsync(c => c.TenantId == tenant.Id))
+            {
+                continue;
+            }
+            var category = new Domain.Entities.ProductCategory("Bebidas", tenant.Id);
+            dbContext.Categories.Add(category);
+            await dbContext.SaveChangesAsync();
+
+            var product = new Domain.Entities.Product(category.Id, "Agua", 3000m, tenant.Id);
+            dbContext.Products.Add(product);
+
+            if (!await dbContext.Settings.AnyAsync(s => s.TenantId == tenant.Id && s.Key == "HourlyRate"))
+            {
+                dbContext.Settings.Add(new Domain.Entities.AppSetting("HourlyRate", "12000", tenant.Id));
+            }
+            if (!await dbContext.Settings.AnyAsync(s => s.TenantId == tenant.Id && s.Key == "BusinessName"))
+            {
+                dbContext.Settings.Add(new Domain.Entities.AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
+            }
             await dbContext.SaveChangesAsync();
         }
     }

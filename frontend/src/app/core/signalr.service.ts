@@ -54,6 +54,19 @@ export class SignalRService {
   readonly tableStateUpdated = signal<TableStateUpdatedEvent | null>(null);
   readonly adminNotification = signal<AdminNotification | null>(null);
 
+  async reconnect(): Promise<void> {
+    if (this.hub) {
+      try {
+        await this.hub.stop();
+      } catch {
+        // ignore
+      }
+      this.connected.set(false);
+    }
+    this.hub = undefined;
+    await this.connect();
+  }
+
   async connect(): Promise<void> {
     if (this.hub?.state === signalR.HubConnectionState.Connected) {
       return;
@@ -85,6 +98,14 @@ export class SignalRService {
     await this.hub.start();
     this.connected.set(true);
     this.rejoinGroups();
+  }
+
+  clearSessionEnded(): void {
+    this.sessionEnded.set(null);
+  }
+
+  clearSessionStarted(): void {
+    this.sessionStarted.set(null);
   }
 
   async joinTable(tableId: string): Promise<void> {

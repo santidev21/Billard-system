@@ -18,6 +18,10 @@ export class HistoryComponent implements OnInit {
   readonly fmtMoney = fmtMoney;
   readonly matches = signal<MatchListItem[]>([]);
   readonly loading = signal(false);
+  readonly selectedMatch = signal<import('../../core/models').MatchDetail | null>(null);
+  readonly loadingDetail = signal(false);
+  readonly showRounds = signal(false);
+  readonly detailError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.loading.set(true);
@@ -39,6 +43,35 @@ export class HistoryComponent implements OnInit {
     const start = new Date(m.startedAt).getTime();
     const end = new Date(m.endedAt).getTime();
     return formatDuration((end - start) / 1000);
+  }
+
+  async openMatch(id: string): Promise<void> {
+    this.loadingDetail.set(true);
+    this.detailError.set(null);
+    this.showRounds.set(true);
+    this.selectedMatch.set(null);
+    try {
+      const detail = await this.api.getMatch(id);
+      this.selectedMatch.set(detail);
+    } catch (e: any) {
+      this.detailError.set(e?.error?.message ?? 'No se pudo cargar el detalle de la partida.');
+    } finally {
+      this.loadingDetail.set(false);
+    }
+  }
+
+  closeRounds(): void {
+    this.showRounds.set(false);
+    this.selectedMatch.set(null);
+    this.detailError.set(null);
+  }
+
+  formatRoundDuration(durationSeconds: number | null | undefined): string {
+    if (durationSeconds == null) return '—';
+    const s = Math.max(0, Math.floor(durationSeconds));
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
   }
 }
 

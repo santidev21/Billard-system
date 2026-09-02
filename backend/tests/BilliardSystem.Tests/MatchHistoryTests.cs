@@ -86,4 +86,79 @@ public sealed class MatchHistoryTests
 
         match.TableTotal.Should().Be(18000m);
     }
+
+    [Fact]
+    public void CloseRound_ConsecutiveRoundsUsePreviousEndAsStart()
+    {
+        var match = CreateGame();
+        var t0 = match.StartedAt;
+        var t1 = t0.AddSeconds(30);
+        var t2 = t0.AddSeconds(60);
+
+        match.AddScore("white", 3, null);
+        match.AddScore("yellow", 3, null);
+        var r1 = match.CloseRound(t1);
+
+        match.AddScore("white", 1, null);
+        var r2 = match.CloseRound(t2);
+
+        r1.StartedAt.Should().Be(t0);
+        r1.EndedAt.Should().Be(t1);
+        r1.DurationSeconds.Should().Be(30);
+        r2.StartedAt.Should().Be(t1);
+        r2.EndedAt.Should().Be(t2);
+        r2.DurationSeconds.Should().Be(30);
+        r2.Duration.Should().Be(t2 - t1);
+    }
+
+    [Fact]
+    public void CloseRound_DurationSeconds_IsEndMinusStart()
+    {
+        var match = CreateGame();
+        var t0 = match.StartedAt;
+        var t1 = t0.AddSeconds(45);
+        match.AddScore("white", 5, null);
+        var r1 = match.CloseRound(t1);
+        r1.DurationSeconds.Should().Be(45);
+    }
+
+    [Fact]
+    public void TryCloseFinalRound_CreatesRoundWhenTimeElapsed()
+    {
+        var match = CreateGame();
+        var t0 = match.StartedAt;
+        var t1 = t0.AddMinutes(5);
+        match.AddScore("white", 2, null);
+        var final = match.TryCloseFinalRound(t1);
+        final.Should().NotBeNull();
+        final!.StartedAt.Should().Be(t0);
+        final.EndedAt.Should().Be(t1);
+        final.DurationSeconds.Should().Be(300);
+        final.WhiteScore.Should().Be(2);
+        match.Rounds.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void TryCloseFinalRound_ReturnsNullWhenNoTimeElapsed()
+    {
+        var match = CreateGame();
+        var final = match.TryCloseFinalRound(match.StartedAt);
+        final.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryCloseFinalRound_AfterCloseRoundUsesLastEndAsStart()
+    {
+        var match = CreateGame();
+        var t0 = match.StartedAt;
+        var t1 = t0.AddSeconds(20);
+        var t2 = t0.AddSeconds(50);
+        var r1 = match.CloseRound(t1);
+        match.AddScore("yellow", 3, null);
+        var final = match.TryCloseFinalRound(t2);
+        final.Should().NotBeNull();
+        final!.StartedAt.Should().Be(t1);
+        final.EndedAt.Should().Be(t2);
+        final.DurationSeconds.Should().Be(30);
+    }
 }

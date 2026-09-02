@@ -284,6 +284,16 @@ public static class BilliardEndpoints
             dbContext.Tables.Add(table);
             await dbContext.SaveChangesAsync(ct);
 
+            var category = new ProductCategory("Bebidas", tenant.Id);
+            dbContext.Categories.Add(category);
+            await dbContext.SaveChangesAsync(ct);
+
+            var product = new Product(category.Id, "Agua", 3000m, tenant.Id);
+            dbContext.Products.Add(product);
+            dbContext.Settings.Add(new AppSetting("HourlyRate", "12000", tenant.Id));
+            dbContext.Settings.Add(new AppSetting("BusinessName", "Billar Tres Bandas", tenant.Id));
+            await dbContext.SaveChangesAsync(ct);
+
             return Results.Ok(new CreateLocalResponse(tenant.Id, tenant.Name, tenant.Slug, defaultPassword));
         });
 
@@ -846,15 +856,22 @@ public static class BilliardEndpoints
             if (table is null) return Results.NotFound();
             if (table.ActiveMatchId is not { } matchId) return Results.BadRequest("No hay partida activa.");
 
-            var match = await dbContext.MatchHistories.Include(h => h.Consumptions).FirstOrDefaultAsync(h => h.Id == matchId, ct);
+            var match = await dbContext.MatchHistories.Include(h => h.Consumptions).Include(h => h.Rounds).FirstOrDefaultAsync(h => h.Id == matchId, ct);
             if (match is null) return Results.NotFound();
 
             var endedAt = DateTimeOffset.UtcNow;
             var elapsedSeconds = Math.Max(0, (int)(endedAt - match.StartedAt).TotalSeconds);
             var tableTotal = Math.Round((elapsedSeconds / 3600m) * match.HourlyRateSnapshot, 2);
+            var finalRound = match.TryCloseFinalRound(endedAt);
+            if (finalRound is not null)
+                dbContext.MatchRounds.Add(finalRound);
             match.Close(endedAt, tableTotal, match.ConsumptionTotal, null);
             table.EndSession(match.Id, null);
             await dbContext.SaveChangesAsync(ct);
+            if (finalRound is not null)
+                await WriteAuditAsync(dbContext, AuditActionType.RoundCompleted, null, table.Id, match.Id, null,
+                    finalRound.WinnerName is null ? $"Ronda {finalRound.RoundNumber} (cierre) en {table.Name}: empate"
+                        : $"Ronda {finalRound.RoundNumber} (cierre): gana {finalRound.WinnerName}", table.TenantId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("SessionEnded", new
             {
@@ -874,10 +891,10 @@ public static class BilliardEndpoints
 
             var table = await dbContext.Tables.FirstOrDefaultAsync(t => t.Id == id, ct);
             if (table?.ActiveMatchId is not { } matchId) return Results.BadRequest("No hay partida activa.");
-            var match = await dbContext.MatchHistories.FirstOrDefaultAsync(h => h.Id == matchId, ct);
+            var match = await dbContext.MatchHistories.Include(h => h.Rounds).FirstOrDefaultAsync(h => h.Id == matchId, ct);
             if (match is null) return Results.NotFound();
 
-            var round = match.CloseRound();
+            var round = match.CloseRound(DateTimeOffset.UtcNow);
             dbContext.MatchRounds.Add(round);
             await dbContext.SaveChangesAsync(ct);
             await WriteAuditAsync(dbContext, AuditActionType.RoundCompleted, request.UserId, table.Id, match.Id, request.TransactionId,
@@ -912,7 +929,7 @@ public static class BilliardEndpoints
             if (match is null) return Results.NotFound();
 
             var rounds = match.Rounds.OrderBy(r => r.RoundNumber)
-                .Select(r => new RoundDetailResponse(r.RoundNumber, r.WhiteScore, r.YellowScore, r.WinnerName, r.EndedAt, r.Duration)).ToArray();
+                .Select(r => new RoundDetailResponse(r.RoundNumber, r.WhiteScore, r.YellowScore, r.WinnerName, r.EndedAt, r.DurationSeconds)).ToArray();
             var whiteRounds = rounds.Count(r => r.WinnerName == match.WhitePlayerName);
             var yellowRounds = rounds.Count(r => r.WinnerName == match.YellowPlayerName);
             return Results.Ok(new RoundHistoryResponse(whiteRounds, yellowRounds, match.RoundNumber, rounds));
@@ -937,7 +954,7 @@ public static class BilliardEndpoints
         {
             var tenantId = user.GetTenantId();
             var match = await dbContext.MatchHistories.AsNoTracking()
-                .Include(h => h.ScoreLogs).Include(h => h.Consumptions)
+                .Include(h => h.ScoreLogs).Include(h => h.Consumptions).Include(h => h.Rounds)
                 .FirstOrDefaultAsync(h => h.Id == id && h.TenantId == tenantId, ct);
             return match is null ? Results.NotFound() : Results.Ok(ToMatchDetailResponse(match));
         }).RequireAuthorization("AdminSession");
@@ -1078,7 +1095,8 @@ public static class BilliardEndpoints
         match.StartedAt, match.EndedAt is { } endedAt ? endedAt - match.StartedAt : TimeSpan.Zero,
         match.ConsumptionTotal,
         match.Consumptions.Select(c => new ConsumptionAmountResponse(
-            c.Id, c.ProductNameSnapshot, c.UnitPriceSnapshot, c.Quantity, c.Total, c.CreatedAt)).ToArray());
+            c.Id, c.ProductNameSnapshot, c.UnitPriceSnapshot, c.Quantity, c.Total, c.CreatedAt)).ToArray(),
+        match.Rounds.OrderBy(r => r.RoundNumber).Select(r => new RoundDetailResponse(r.RoundNumber, r.WhiteScore, r.YellowScore, r.WinnerName, r.EndedAt, r.DurationSeconds)).ToArray());
 }
 
 #region Request / Response DTOs
@@ -1087,7 +1105,7 @@ public sealed record TableResponse(Guid Id, string Name, string Code, string Sta
 public sealed record ProductCategoryResponse(Guid Id, string Name, IReadOnlyCollection<ProductResponse> Products);
 public sealed record ProductResponse(Guid Id, string Name, decimal Price);
 public sealed record DashboardSummaryResponse(int TotalTables, int AvailableTables, int OccupiedTables, decimal SalesToday, decimal SalesByGame, decimal SalesByConsumption);
-public sealed record MatchDetailResponse(Guid Id, string WhitePlayerName, string YellowPlayerName, int WhiteScore, int YellowScore, string GameMode, DateTimeOffset StartedAt, TimeSpan Elapsed, decimal ConsumptionTotal, IReadOnlyCollection<ConsumptionAmountResponse> Consumptions);
+public sealed record MatchDetailResponse(Guid Id, string WhitePlayerName, string YellowPlayerName, int WhiteScore, int YellowScore, string GameMode, DateTimeOffset StartedAt, TimeSpan Elapsed, decimal ConsumptionTotal, IReadOnlyCollection<ConsumptionAmountResponse> Consumptions, IReadOnlyCollection<RoundDetailResponse> Rounds);
 public sealed record TableDetailResponse(Guid Id, string Name, string Code, string Status, decimal HourlyRate, bool IsActive, Guid? ActiveMatchId, MatchDetailResponse? ActiveMatch);
 
 public sealed record LoginRequest(string? UserName, string? Password);
@@ -1113,7 +1131,7 @@ public sealed record ScoreResponse(int NewScore);
 public sealed record ConsumptionAddedResponse(decimal ConsumptionTotal);
 public sealed record FinishSessionResponse(Guid MatchHistoryId, decimal GrandTotal);
 public sealed record RoundResponse(Guid Id, int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName);
-public sealed record RoundDetailResponse(int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName, DateTimeOffset EndedAt, TimeSpan Duration);
+public sealed record RoundDetailResponse(int RoundNumber, int WhiteScore, int YellowScore, string? WinnerName, DateTimeOffset EndedAt, int DurationSeconds);
 public sealed record RoundHistoryResponse(int WhiteRounds, int YellowRounds, int CurrentRoundNumber, IReadOnlyCollection<RoundDetailResponse> Rounds);
 public sealed record ConsumptionAmountResponse(Guid Id, string ProductName, decimal UnitPrice, int Quantity, decimal Total, DateTimeOffset CreatedAt);
 public sealed record MatchListItemResponse(Guid Id, Guid TableId, string WhitePlayerName, string YellowPlayerName, int WhiteScore, int YellowScore, int TotalCarambolas, string GameMode, DateTimeOffset StartedAt, DateTimeOffset? EndedAt, decimal GrandTotal);

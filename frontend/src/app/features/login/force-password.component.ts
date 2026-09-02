@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { SignalRService } from '../../core/signalr.service';
 import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
@@ -48,6 +49,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 })
 export class ForcePasswordComponent {
   private readonly auth = inject(AuthService);
+  private readonly signalr = inject(SignalRService);
   private readonly router = inject(Router);
 
   newPassword = '';
@@ -68,6 +70,11 @@ export class ForcePasswordComponent {
     this.loading.set(true);
     try {
       await this.auth.forceChangePassword(this.newPassword);
+      try {
+        await this.signalr.reconnect();
+      } catch {
+        // ignore
+      }
       if (this.auth.isSuperAdmin()) {
         await this.router.navigate(['/super']);
       } else {

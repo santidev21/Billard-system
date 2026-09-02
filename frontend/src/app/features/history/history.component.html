@@ -9,7 +9,7 @@
     <table>
       <thead>
         <tr>
-          <th>Blanco</th><th>Amarillo</th><th>Marcador</th><th>Carambolas</th><th>Modo</th><th>Duración</th><th>Total</th>
+          <th>Blanco</th><th>Amarillo</th><th>Marcador</th><th>Carambolas</th><th>Modo</th><th>Duración</th><th>Total</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -22,11 +22,66 @@
             <td>{{ gameMode(m.gameMode) }}</td>
             <td>{{ duration(m) }}</td>
             <td>${{ fmtMoney(m.grandTotal) }}</td>
+            <td><button class="btn btn-outline mini" (click)="openMatch(m.id)">Ver rondas</button></td>
           </tr>
         } @empty {
-          <tr><td colspan="7" class="empty">Sin partidas registradas</td></tr>
+          <tr><td colspan="8" class="empty">Sin partidas registradas</td></tr>
         }
       </tbody>
     </table>
   </div>
 </section>
+
+@if (showRounds()) {
+  <div class="rounds-overlay overlay" (click)="closeRounds()">
+    <div class="card glass" (click)="$event.stopPropagation()">
+      <header>
+        <h3>
+          @if (selectedMatch(); as d) {
+            {{ d.whitePlayerName }} vs {{ d.yellowPlayerName }}
+          } @else {
+            Rondas
+          }
+        </h3>
+        <button class="btn btn-outline close" (click)="closeRounds()">✕</button>
+      </header>
+      @if (loadingDetail()) {
+        <div class="spinner-center"><app-spinner [label]="'Cargando rondas…'" /></div>
+      } @else if (detailError(); as err) {
+        <p class="empty">{{ err }}</p>
+      } @else if (selectedMatch(); as d) {
+        @if ((d.rounds ?? []).length) {
+          <table>
+            <thead>
+              <tr><th>Ronda</th><th>Blanco</th><th>Amarillo</th><th>Duración</th><th>Resultado</th></tr>
+            </thead>
+            <tbody>
+              @for (r of (d.rounds ?? []); track r.roundNumber) {
+                <tr>
+                  <td>#{{ r.roundNumber }}</td>
+                  <td>{{ r.whiteScore }}</td>
+                  <td>{{ r.yellowScore }}</td>
+                  <td>{{ formatRoundDuration(r.durationSeconds) }}</td>
+                  <td>{{ r.winnerName ? (r.winnerName + ' gana') : 'Empate' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="empty">Sin rondas registradas en esta partida.</p>
+        }
+        @if ((d.consumptions ?? []).length) {
+          <h4 class="sub">Consumos</h4>
+          <table>
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Total</th></tr></thead>
+            <tbody>
+              @for (c of (d.consumptions ?? []); track c.id) {
+                <tr><td>{{ c.productName }}</td><td>x{{ c.quantity }}</td><td>${{ fmtMoney(c.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </div>
+  </div>
+}

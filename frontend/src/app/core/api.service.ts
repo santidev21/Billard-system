@@ -7,6 +7,7 @@ import {
   DashboardSummary,
   LocalInfo,
   LoginResponse,
+  MatchDetail,
   MatchListItem,
   Product,
   RecoveryCode,
@@ -143,9 +144,9 @@ export class ApiService {
       this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/t/${s}/tables/${id}/finish-round`, { transactionId })
     );
   }
-  getRounds(slug: string, id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }> {
+  getRounds(slug: string, id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] }> {
     const s = slug || 'demo';
-    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] }>(`${this.base}/t/${s}/tables/${id}/rounds`));
+    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] }>(`${this.base}/t/${s}/tables/${id}/rounds`));
   }
 
   getProducts(): Promise<Product[]> {
@@ -171,8 +172,8 @@ export class ApiService {
   getMatches(): Promise<MatchListItem[]> {
     return lastValueFrom(this.http.get<MatchListItem[]>(`${this.base}/matches`));
   }
-  getMatch(id: string): Promise<any> {
-    return lastValueFrom(this.http.get<any>(`${this.base}/matches/${id}`));
+  getMatch(id: string): Promise<MatchDetail> {
+    return lastValueFrom(this.http.get<MatchDetail>(`${this.base}/matches/${id}`));
   }
   getDashboardSummary(): Promise<DashboardSummary> {
     return lastValueFrom(this.http.get<DashboardSummary>(`${this.base}/dashboard/summary`));

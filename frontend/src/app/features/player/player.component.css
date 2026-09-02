@@ -162,7 +162,7 @@
 
 .info-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.4rem;
   padding: 0.7rem 0.9rem;
   align-items: center;
@@ -170,9 +170,10 @@
 .money-block, .timer-block { display: flex; flex-direction: column; gap: 0.1rem; align-items: center; }
 .info-bar .label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; }
 .timer { font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--yellow-ball); }
+.timer-block.round .timer { color: #38BDF8; }
 .amt { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .money-block.grand .amt { color: #34D399; }
-.free-mode-bar { grid-template-columns: 1fr 1fr; }
+.free-mode-bar { grid-template-columns: repeat(3, 1fr); }
 
 .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; padding: 0.6rem 0.8rem; }
 .toolbar .btn { flex: 1; min-width: 130px; }
@@ -254,8 +255,20 @@
   .center-col { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) {
-  app-camera-view { display: none; }
-  .arena { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  app-camera-view { display: none !important; }
+  :host { flex: none; height: auto; min-height: auto; display: block; }
+  .player-shell { flex: none; height: auto; min-height: auto; }
+  .arena {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "white yellow"
+      "center center";
+    gap: 0.5rem;
+    flex: none;
+  }
+  .player-white { grid-area: white; }
+  .player-yellow { grid-area: yellow; }
+  .center-col { grid-area: center; }
   .side { padding: 0.6rem 0.4rem; gap: 0.35rem; }
   .score-btn { font-size: 3rem; max-width: 140px; padding: 0.7rem 0.3rem; }
   .score-btns { gap: 0.25rem; max-width: 160px; }
@@ -264,6 +277,8 @@
   .player-name input { font-size: 0.85rem; padding: 0.35rem 0.4rem; }
   .ball { width: 30px; height: 30px; }
   .badge { font-size: 0.65rem; }
+  .virtual-table { flex: none; min-height: 0; }
+  .table-felt { max-width: 300px; }
   .toolbar { gap: 0.35rem; padding: 0.5rem 0.6rem; }
   .toolbar .btn { min-width: 100px; font-size: 0.85rem; padding: 0.7rem 0.8rem; }
   .info-bar { gap: 0.3rem; padding: 0.5rem 0.6rem; }
@@ -275,6 +290,11 @@
 }
 @media (max-width: 480px) {
   .info-bar { grid-template-columns: 1fr 1fr; }
+  .toolbar { flex-direction: column; }
+  .toolbar .btn { width: 100%; min-width: 0; }
+}
+@media (pointer: coarse) and (max-width: 900px) {
+  app-camera-view { display: none !important; }
 }
 @media (max-height: 760px) {
   .ball { width: 32px; height: 32px; }

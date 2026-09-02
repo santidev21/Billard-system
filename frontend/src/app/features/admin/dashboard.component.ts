@@ -1,6 +1,8 @@
 import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { RouterLink } from '@angular/router';
+
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { SignalRService } from '../../core/signalr.service';
@@ -11,7 +13,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, CameraViewComponent, SpinnerComponent],
+  imports: [FormsModule, RouterLink, CameraViewComponent, SpinnerComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
   standalone: true,
@@ -148,14 +150,19 @@ export class DashboardComponent implements OnInit {
   }
 
   private async refresh(): Promise<void> {
-    this.loading.set(true);
+    const showSpinner = this.tables().length === 0;
+    if (showSpinner) {
+      this.loading.set(true);
+    }
     try {
       await Promise.race([
         this.doRefresh(),
         new Promise<void>((resolve) => setTimeout(() => resolve(), 12000)),
       ]);
     } finally {
-      this.loading.set(false);
+      if (showSpinner) {
+        this.loading.set(false);
+      }
     }
   }
 

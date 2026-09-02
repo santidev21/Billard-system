@@ -30,7 +30,14 @@ export class AdminLayoutComponent implements OnInit {
   readonly passwordError = signal<string | null>(null);
   readonly saving = signal(false);
 
-  constructor() {}
+  constructor() {
+    effect(() => {
+      const n = this.signalr.adminNotification();
+      if (n) {
+        this.callPopup.set(n);
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     if (this.auth.mustChangePassword()) {
@@ -38,12 +45,6 @@ export class AdminLayoutComponent implements OnInit {
       return;
     }
     this.tenantName.set(this.auth.getUser()?.tenantName ?? null);
-    effect(() => {
-      const n = this.signalr.adminNotification();
-      if (n) {
-        this.callPopup.set(n);
-      }
-    });
     await this.signalr.joinAdminGroup();
   }
 

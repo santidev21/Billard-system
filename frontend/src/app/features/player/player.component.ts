@@ -51,7 +51,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly roundNumber = signal(0);
   readonly lastRound = signal<string | null>(null);
   readonly showRounds = signal(false);
-  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; duration: string }[] } | null>(null);
+  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] } | null>(null);
+  readonly roundStartedAt = signal<number | null>(null);
   readonly requestSent = signal<'waiter' | 'check' | null>(null);
   readonly products = signal<{ id: string; name: string; price: number }[]>([]);
 
@@ -71,6 +72,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
     return `${h}:${m}`;
   });
   readonly elapsedMinutes = computed(() => Math.floor(this.elapsedSeconds() / 60));
+  readonly roundElapsedSeconds = computed(() => {
+    const start = this.roundStartedAt();
+    return start ? Math.max(0, Math.floor((this.now() - start) / 1000)) : 0;
+  });
+  readonly roundElapsed = computed(() => {
+    const s = this.roundElapsedSeconds();
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
+  });
 
   readonly hourlyRate = signal(String(localStorage.getItem('defaultRate') ?? '12000'));
 
@@ -137,6 +148,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
     effect(() => {
       const e = this.signalr.sessionEnded();
       if (e && e.tableId === this.tableId()) {
+        this.signalr.clearSessionEnded();
+        if (this.gameMode() === 'FreeMode') {
+          return;
+        }
         this.endedSummary.set({
           time: this.elapsed(),
           consumptionTotal: e.consumptionTotal ?? 0,
@@ -148,6 +163,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     effect(() => {
       const s = this.signalr.sessionStarted();
       if (s && s.tableId === this.tableId()) {
+        this.signalr.clearSessionEnded();
         this.showEnded.set(false);
         this.endedSummary.set(null);
         void this.refreshFromServer();
@@ -178,7 +194,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
             const tableId = this.tableId();
             try {
               const detail = await this.api.getTenantTable(slug, tableId);
-              if (!detail.activeMatch) {
+              const shouldStart = !detail.activeMatch || detail.activeMatch.gameMode === 'FreeMode';
+              if (shouldStart) {
                 await this.startSession();
               }
             } catch {}
@@ -193,7 +210,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
         if (this.tableId() && !this.running()) {
           try {
             const detail = await this.api.getTenantTable('demo', this.tableId());
-            if (!detail.activeMatch) {
+            const shouldStart = !detail.activeMatch || detail.activeMatch.gameMode === 'FreeMode';
+            if (shouldStart) {
               await this.startSession();
             }
           } catch {}
@@ -208,6 +226,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   closeEnded(): void {
     this.showEnded.set(false);
     this.endedSummary.set(null);
+    this.signalr.clearSessionEnded();
   }
 
   private resetState(): void {
@@ -215,6 +234,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteScore.set(0);
     this.yellowScore.set(0);
     this.startedAt.set(null);
+    this.roundStartedAt.set(null);
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
     this.roundNumber.set(0);
@@ -241,10 +261,33 @@ export class PlayerComponent implements OnInit, OnDestroy {
     try {
       const detail = await this.api.getTenantTable(this.slug, this.tableId());
       if (detail.activeMatch) {
+        if (this.gameMode() === 'FreeMode' && detail.activeMatch.gameMode !== 'FreeMode') {
+          this.running.set(false);
+          this.whiteScore.set(0);
+          this.yellowScore.set(0);
+          this.startedAt.set(null);
+          this.roundStartedAt.set(null);
+          this.blockedMsg.set(`La mesa ${this.tableName()} está ocupada por una partida administrada.`);
+          return;
+        }
+        this.blockedMsg.set(null);
         this.applyDetail(detail);
       } else if (this.running() && this.startedAt()) {
         const elapsedMs = Date.now() - this.startedAt()!;
         if (elapsedMs < 5000) {
+          return;
+        }
+        if (this.gameMode() === 'FreeMode') {
+          this.running.set(false);
+          this.whiteScore.set(0);
+          this.yellowScore.set(0);
+          this.startedAt.set(null);
+          this.roundStartedAt.set(null);
+          try {
+            await this.startSession();
+          } catch {
+            // ignore, will retry on next poll
+          }
           return;
         }
         this.endedSummary.set({
@@ -257,11 +300,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.whiteScore.set(0);
         this.yellowScore.set(0);
         this.startedAt.set(null);
+        this.roundStartedAt.set(null);
       } else {
         this.running.set(false);
         this.whiteScore.set(0);
         this.yellowScore.set(0);
         this.startedAt.set(null);
+        this.roundStartedAt.set(null);
+        if (this.gameMode() === 'FreeMode') {
+          this.blockedMsg.set(null);
+        }
       }
     } catch {
       // offline
@@ -334,6 +382,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.whiteScore.set(0);
       this.yellowScore.set(0);
       this.startedAt.set(null);
+      this.roundStartedAt.set(null);
       return;
     }
     const m = detail.activeMatch;
@@ -343,6 +392,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteScore.set(m.whiteScore);
     this.yellowScore.set(m.yellowScore);
     this.startedAt.set(new Date(m.startedAt).getTime());
+    // round timer: start from last round's end or match start — monotonic to avoid stale poll overwriting a just-closed round (00:00 -> 00:41 bug)
+    const lastRoundEnd = m.rounds.length > 0 ? new Date(m.rounds[m.rounds.length - 1].endedAt).getTime() : new Date(m.startedAt).getTime();
+    const currentRoundStart = this.roundStartedAt();
+    if (currentRoundStart === null || lastRoundEnd > currentRoundStart) {
+      this.roundStartedAt.set(lastRoundEnd);
+    } else if (m.roundNumber > this.roundNumber() && lastRoundEnd !== currentRoundStart) {
+      // roundNumber grew but computed start didn't advance (edge), force update
+      this.roundStartedAt.set(lastRoundEnd);
+    }
     this.consumptionTotal.set(m.consumptionTotal);
     this.consumptions.set(m.consumptions.map((c) => ({ id: c.id, name: c.productName, qty: c.quantity, total: c.total, at: c.createdAt })));
     this.roundNumber.set(m.roundNumber);
@@ -413,6 +471,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
     this.whiteScore.set(0);
     this.yellowScore.set(0);
+    this.roundStartedAt.set(Date.now());
   }
 
   async showRoundHistory(): Promise<void> {
@@ -433,19 +492,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.rounds.set(null);
   }
 
-  formatDuration(duration: string | null | undefined): string {
-    if (!duration) {
-      return '—';
-    }
-    const matchNum = duration.match(/(\d+):(\d+):(\d+)/);
-    if (matchNum) {
-      const h = Number(matchNum[1]);
-      const m = Number(matchNum[2]);
-      const s = Number(matchNum[3]);
-      const mm = h * 60 + m;
-      return `${String(mm).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-    return duration;
+  formatDuration(durationSeconds: number | null | undefined): string {
+    if (durationSeconds == null) return '—';
+    const s = Math.max(0, Math.floor(durationSeconds));
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
   }
 
   formatAt(value: string | undefined): string {
@@ -492,6 +544,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteScore.set(0);
     this.yellowScore.set(0);
     this.startedAt.set(Date.now());
+    this.roundStartedAt.set(Date.now());
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
     this.running.set(true);
@@ -579,6 +632,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteScore.set(0);
     this.yellowScore.set(0);
     this.startedAt.set(null);
+    this.roundStartedAt.set(null);
     this.consumptionTotal.set(0);
     this.consumptions.set([]);
     this.roundNumber.set(0);

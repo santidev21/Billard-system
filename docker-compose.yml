@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: billiard
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
     volumes:
       - billard-pg:/var/lib/postgresql/data
     networks:

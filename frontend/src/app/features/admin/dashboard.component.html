@@ -165,7 +165,6 @@
           </div>
           <button class="btn btn-primary" (click)="requestFinish()">Cerrar mesa</button>
 
-          @if (consumptionProducts().length) {
             <div class="consumo-section">
               @if (m.consumptions.length) {
                 <h4>Consumos actuales ({{ m.consumptions.length }})</h4>
@@ -189,18 +188,24 @@
                   }
                 </div>
               }
-              <div class="add-consumo">
-                <select [(ngModel)]="toastProductId">
-                  <option value="" disabled>Agregar consumo…</option>
-                  @for (p of consumptionProducts(); track p.id) {
-                    <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
-                  }
-                </select>
-                <input type="number" [(ngModel)]="toastQuantity" min="1" max="999" class="consumo-qty-input" />
-                <button class="btn btn-primary" [disabled]="!toastProductId || toastQuantity < 1" (click)="addConsumptionToTable(t.id)">Agregar</button>
-              </div>
+              @if (consumptionProducts().length) {
+                <div class="add-consumo">
+                  <select [(ngModel)]="toastProductId">
+                    <option value="" disabled>Agregar consumo…</option>
+                    @for (p of consumptionProducts(); track p.id) {
+                      <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
+                    }
+                  </select>
+                  <input type="number" [(ngModel)]="toastQuantity" min="1" max="999" class="consumo-qty-input" />
+                  <button class="btn btn-primary" [disabled]="!toastProductId || toastQuantity < 1" (click)="addConsumptionToTable(t.id)">Agregar</button>
+                </div>
+              } @else {
+                <div class="consumo-empty">
+                  <p>No hay productos en el catálogo.</p>
+                  <a class="btn btn-outline" routerLink="/admin/catalog">Ir al Catálogo</a>
+                </div>
+              }
             </div>
-          }
         } @else {
           <div class="start-form">
             <input [(ngModel)]="selectedWhite" placeholder="Jugador blanco" />

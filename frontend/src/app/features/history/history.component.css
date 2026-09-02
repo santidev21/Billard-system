@@ -5,3 +5,12 @@ th, td { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 1px solid rgb
 th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
 td { color: var(--text-primary); font-size: 0.95rem; }
 .empty { color: var(--text-muted); text-align: center; }
+.mini { padding: 0.35rem 0.6rem; font-size: 0.8rem; border-radius: 8px; }
+.sub { margin: 1rem 0 0.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+.overlay .card { background: var(--slate-light); border-radius: 16px; padding: 1.4rem; width: min(560px, 94vw); max-height: 85vh; overflow: auto; }
+.overlay .card header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.overlay .card h3 { margin: 0; }
+.overlay table { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin-top: 0.5rem; }
+.overlay th, .overlay td { padding: 0.5rem 0.6rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.overlay th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }

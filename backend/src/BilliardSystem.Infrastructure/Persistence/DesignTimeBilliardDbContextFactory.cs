@@ -16,7 +16,7 @@ public sealed class DesignTimeBilliardDbContextFactory : IDesignTimeDbContextFac
         var provider = services.BuildServiceProvider();
 
         var options = new DbContextOptionsBuilder<BilliardDbContext>()
-            .UseNpgsql("Host=localhost;Database=billiard;Username=billard;Password=billard")
+            .UseNpgsql("Host=localhost;Port=5433;Database=billiard;Username=postgres;Password=postgres")
             .Options;
 
         return new BilliardDbContext(options, provider.GetRequiredService<IDomainEventDispatcher>());

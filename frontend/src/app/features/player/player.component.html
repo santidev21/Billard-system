@@ -57,6 +57,10 @@
               <span class="label">Tiempo</span>
               <span class="timer">{{ elapsed() }}</span>
             </div>
+            <div class="timer-block round">
+              <span class="label">Ronda</span>
+              <span class="timer">{{ roundElapsed() }}</span>
+            </div>
             <div class="money-block">
               <span class="label">Consumos</span>
               <span class="amt">${{ consumptionTotalText() }}</span>
@@ -75,6 +79,10 @@
             <div class="timer-block">
               <span class="label">Tiempo</span>
               <span class="timer">{{ elapsed() }}</span>
+            </div>
+            <div class="timer-block round">
+              <span class="label">Ronda</span>
+              <span class="timer">{{ roundElapsed() }}</span>
             </div>
             <div class="money-block">
               <span class="label">Carambolas</span>
@@ -178,7 +186,7 @@
                 <td>#{{ r.roundNumber }}</td>
                 <td>{{ r.whiteScore }}</td>
                 <td>{{ r.yellowScore }}</td>
-                <td>{{ formatDuration(r.duration) }}</td>
+                <td>{{ formatDuration(r.durationSeconds) }}</td>
                 <td>{{ r.winnerName ? (r.winnerName + ' gana') : 'Empate' }}</td>
               </tr>
             }

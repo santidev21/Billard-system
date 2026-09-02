@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { SignalRService } from '../../core/signalr.service';
 import { SpinnerComponent } from '../../shared/spinner.component';
 
 @Component({
@@ -14,6 +15,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 })
 export class LoginComponent {
   private readonly auth = inject(AuthService);
+  private readonly signalr = inject(SignalRService);
   private readonly router = inject(Router);
 
   userName = '';
@@ -26,6 +28,11 @@ export class LoginComponent {
     this.loading.set(true);
     try {
       const res = await this.auth.login(this.userName, this.password);
+      try {
+        await this.signalr.reconnect();
+      } catch {
+        // ignore signalr reconnect failure
+      }
       if (res.mustChangePassword) {
         await this.router.navigate(['/force-password']);
       } else if (this.auth.isSuperAdmin()) {
