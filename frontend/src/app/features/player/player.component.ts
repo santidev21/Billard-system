@@ -34,7 +34,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly blockedMsg = signal<string | null>(null);
   readonly loading = signal(false);
   readonly showEnded = signal(false);
-  readonly endedSummary = signal<{ time: string; consumptionTotal: number; grandTotal: number } | null>(null);
+  readonly endedSummary = signal<{ time: string; consumptionTotal: number; grandTotal: number; whiteScore?: number; yellowScore?: number; whiteName?: string; yellowName?: string } | null>(null);
   readonly whiteName = signal('Jugador 1');
   readonly yellowName = signal('Jugador 2');
   readonly whiteScore = signal(0);
@@ -227,6 +227,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.showEnded.set(false);
     this.endedSummary.set(null);
     this.signalr.clearSessionEnded();
+  }
+
+  async startNewFreeGame(): Promise<void> {
+    this.closeEnded();
+    await this.startSession();
   }
 
   private resetState(): void {
@@ -617,6 +622,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
   async finishConfirmed(): Promise<void> {
     this.showConfirm.set(false);
     const tx = this.genTx();
+    const finalWhite = this.whiteScore();
+    const finalYellow = this.yellowScore();
+    const finalWhiteName = this.whiteName();
+    const finalYellowName = this.yellowName();
+    const finalTime = this.elapsed();
+    const finalConsumption = this.consumptionTotal();
+    const finalGrand = this.grandTotal();
     if (navigator.onLine && this.slug) {
       try {
         await this.api.finishSession(this.slug, this.tableId(), tx);
@@ -627,12 +639,28 @@ export class PlayerComponent implements OnInit, OnDestroy {
       await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', slug: this.slug, tableId: this.tableId(), payload: {} });
     }
     this.endedSummary.set({
-      time: this.elapsed(),
-      consumptionTotal: this.consumptionTotal(),
-      grandTotal: this.grandTotal(),
+      time: finalTime,
+      consumptionTotal: finalConsumption,
+      grandTotal: finalGrand,
+      whiteScore: finalWhite,
+      yellowScore: finalYellow,
+      whiteName: finalWhiteName,
+      yellowName: finalYellowName,
     });
     this.showEnded.set(true);
-    this.resetUi();
+    if (this.gameMode() === 'FreeMode') {
+      // keep modal visible with final score, just reset running state
+      this.running.set(false);
+      this.whiteScore.set(0);
+      this.yellowScore.set(0);
+      this.startedAt.set(null);
+      this.roundStartedAt.set(null);
+      this.consumptionTotal.set(0);
+      this.consumptions.set([]);
+      this.roundNumber.set(0);
+    } else {
+      this.resetUi();
+    }
   }
 
   private resetUi(): void {

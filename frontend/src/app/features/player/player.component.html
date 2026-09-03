@@ -201,18 +201,33 @@
 @if (showEnded(); as es) {
   <div class="confirm overlay">
     <div class="card">
-      <h3>La partida ha finalizado</h3>
-      <p class="msg">El juego terminó. Contacta con un mesero para iniciar uno nuevo.</p>
-      @if (endedSummary(); as s) {
-        <div class="ended-summary">
-          <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
-          <div class="es-row"><span>Total consumo</span><b>${{ fmt(s.consumptionTotal) }}</b></div>
-          <div class="es-row grand"><span>Total</span><b>${{ fmt(s.grandTotal) }}</b></div>
+      @if (gameMode() === 'FreeMode') {
+        <h3>Partida terminada</h3>
+        @if (endedSummary(); as s) {
+          <div class="ended-summary">
+            <div class="es-row"><span>{{ s.whiteName ?? whiteName() }} (Blanco)</span><b>{{ s.whiteScore ?? whiteScore() }}</b></div>
+            <div class="es-row"><span>{{ s.yellowName ?? yellowName() }} (Amarillo)</span><b>{{ s.yellowScore ?? yellowScore() }}</b></div>
+            <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
+          </div>
+        }
+        <div class="confirm-actions">
+          <button class="btn btn-primary" (click)="startNewFreeGame()">Iniciar nueva partida</button>
+          <button class="btn btn-outline" (click)="closeEnded()">Cerrar</button>
+        </div>
+      } @else {
+        <h3>La partida ha finalizado</h3>
+        <p class="msg">El juego terminó. Contacta con un mesero para iniciar uno nuevo.</p>
+        @if (endedSummary(); as s) {
+          <div class="ended-summary">
+            <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
+            <div class="es-row"><span>Total consumo</span><b>${{ fmt(s.consumptionTotal) }}</b></div>
+            <div class="es-row grand"><span>Total</span><b>${{ fmt(s.grandTotal) }}</b></div>
+          </div>
+        }
+        <div class="confirm-actions">
+          <button class="btn btn-primary" (click)="closeEnded()">Entendido</button>
         </div>
       }
-      <div class="confirm-actions">
-        <button class="btn btn-primary" (click)="closeEnded()">Entendido</button>
-      </div>
     </div>
   </div>
 }
