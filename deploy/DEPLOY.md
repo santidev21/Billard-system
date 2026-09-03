@@ -1,55 +1,28 @@
 # Deploy — billard.santidev21.tech
 
-## One-time VPS setup
+## Arquitectura
 
-```bash
-# 1. Clone the repo
-cd /opt
-sudo git clone git@github.com:santidev21/Billard-system.git billard
-cd billard
+El tráfico entra por **`vps-gateway`** (nginx en 80/443, repo privado) → red `billard-net` → contenedor `billard`. La DB Postgres está aislada en `billard-internal-net` (`internal: true`). **No se publican puertos al host.**
 
-# 2. Build and start
-sudo docker compose up -d billard
-
-# 3. Connect gateway to the billard network
-sudo docker network connect billard-net gateway
-
-# 4. Get SSL certificate (Let's Encrypt via gateway webroot)
-sudo certbot certonly \
-  --config-dir /opt/gateway/certbot \
-  --work-dir /opt/gateway/work \
-  --logs-dir /opt/gateway/logs \
-  --webroot -w /opt/gateway/www \
-  -d billard.santidev21.tech \
-  --email orsantiago21@gmail.com \
-  --agree-tos --no-eff-email --keep-until-expiring
-
-# 5. Copy nginx site config and enable
-sudo cp /opt/billard/deploy/nginx-billard.conf \
-  /opt/gateway/sites-available/billard.santidev21.tech.conf
-sudo cp /opt/gateway/sites-available/billard.santidev21.tech.conf \
-  /opt/gateway/sites-enabled/
-
-# 6. Validate and reload
-docker exec gateway nginx -t
-docker exec gateway nginx -s reload
-
-# 7. Verify (and that existing sites still work)
-curl -I https://billard.santidev21.tech/
-curl -I https://splitit.santidev21.tech/
-curl -I https://santidev21.tech/
+```
+Internet → vps-gateway → billard-net → billard (app) ── billard-internal-net ── db
 ```
 
-## Subsequent deploys
+## One-time VPS setup (ya hecho)
 
-Push to `master` → CI builds image → pushes to GHCR → CD SSHs to VPS → pulls and restarts.
+1. Red compartida `billard-net` (external, dueña = vps-gateway). Creada por `docker compose up` del gateway (o `docker network create billard-net`).
+2. Certificado: emitido por el contenedor `certbot` del gateway (`certbot certonly --webroot`).
+3. Site config: `billard.santidev21.tech.conf` versionada en el repo `vps-gateway` → `sites-enabled/`.
+4. Repo clonado en `/opt/billard` (rama `main`).
 
-## Manual deploy
+## Deploys
 
+Push a `main` → CI (backend + frontend) → SSH → `./deploy/deploy.sh deploy`.
+
+Manual:
 ```bash
 cd /opt/billard
-sudo docker compose pull billard
-sudo docker compose up -d billard
+./deploy/deploy.sh deploy
 ```
 
 ## First login
@@ -58,18 +31,17 @@ sudo docker compose up -d billard
 2. Enter default password: `admin`
 3. Change it (min 8 characters) — all other sessions are revoked
 
-## Repo secrets for CI/CD
+## Repo secrets para CI/CD
 
-| Secret | Value |
+| Secret | Valor |
 |--------|-------|
-| `VPS_HOST` | Your VPS IP |
+| `VPS_HOST` | IP del VPS |
 | `VPS_USER` | `santidev21` |
-| `VPS_SSH_KEY` | Private SSH key |
+| `VPS_SSH_PRIVATE_KEY` | Llave SSH privada (misma en todos los repos) |
 
 ## Rollback
 
 ```bash
-# Disable the site
-sudo rm /opt/gateway/sites-enabled/billard.santidev21.tech.conf
-docker exec gateway nginx -s reload
+cd /opt/billard
+./deploy/deploy.sh rollback
 ```

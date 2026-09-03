@@ -46,14 +46,20 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Nginx (80/443)                     │
-│              TLS termination + routing                │
-├──────────────┬──────────────┬───────────────────────┤
-│  Portfolio   │   SplitIt    │   Billiard System     │
-│  :4000       │   :8080/:8443│   :5000               │
-└──────────────┴──────────────┴───────────────────────┘
+                    Internet
+                       │
+            vps-gateway (nginx, 80/443)
+                       │ billard-net (external)
+                       ▼
+┌──────────────────────────────────────┐
+│   billard (app)                      │
+│   ── billard-net (shared, gateway)   │
+│   ── billard-internal-net (internal) │
+│         └── db (postgres, aislada)   │
+└──────────────────────────────────────┘
 ```
+
+Frontend (Angular) y backend (.NET) están empaquetados en una sola imagen (`billard`). La DB Postgres vive en una red interna (`internal: true`) y solo el app la alcanza.
 
 ```
 Frontend (Angular)          Backend (.NET)
@@ -101,31 +107,29 @@ npm start
 
 ## Deployment
 
-See [deploy/DEPLOY.md](deploy/DEPLOY.md) for the full VPS setup guide.
+Deploy automático en push a `main` via GitHub Actions. Manual:
 
 ```bash
-# Build and start
-docker compose up -d billard
-
-# Connect to reverse proxy
-docker network connect billard-net gateway
+cd /opt/billard
+./deploy/deploy.sh deploy
 ```
+
+El tráfico entra por **`vps-gateway`** (repo privado, nginx en 80/443) → `billard-net` → contenedor `billard`. No se exponen puertos al host.
 
 ### Docker Dev (test the current code in Docker)
 
-Whenever you want to test the current code in Docker (front + back are baked into the image):
-
 ```bash
-# rebuild and start (reuses existing DB)
-docker compose up -d --build
+# local: redes locales + puertos de debug
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 # clean state: wipes DB volume and re-seeds Demo/M1 (requires .env)
-docker compose down -v && docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 # verify
 docker compose ps
 docker logs -f billard
-docker exec billard-system-db-1 psql -U postgres -d billard -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
+docker exec billard-db-1 psql -U postgres -d billard -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
 # app at http://127.0.0.1:5000
 ```
 

@@ -1,3 +1,5 @@
+name: billard
+
 services:
   db:
     image: postgres:16-alpine
@@ -6,12 +8,10 @@ services:
       POSTGRES_DB: billiard
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "127.0.0.1:5433:5432"
     volumes:
       - billard-pg:/var/lib/postgresql/data
     networks:
-      - billard-net
+      - billard-internal-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d billiard"]
       interval: 5s
@@ -22,8 +22,6 @@ services:
     build: .
     container_name: billard
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:5000:5000"
     depends_on:
       db:
         condition: service_healthy
@@ -35,6 +33,18 @@ services:
       - Super__Password=${SUPER_PASSWORD}
     networks:
       - billard-net
+      - billard-internal-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "--silent", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
 
 volumes:
   billard-pg:
@@ -42,4 +52,8 @@ volumes:
 networks:
   billard-net:
     name: billard-net
+    external: true
+  billard-internal-net:
+    name: billard-internal-net
     driver: bridge
+    internal: true

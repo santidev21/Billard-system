@@ -1,0 +1,23 @@
+# Local development — run with:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# This file:
+# - Redefines shared networks as local bridges (no external dependency)
+# - Publishes debug ports to localhost
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  billard:
+    ports:
+      - "127.0.0.1:5000:5000"
+
+networks:
+  billard-net:
+    name: billard-net
+    driver: bridge
+  billard-internal-net:
+    name: billard-internal-net
+    driver: bridge

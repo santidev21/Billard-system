@@ -21,6 +21,7 @@ RUN dotnet publish src/BilliardSystem.API/BilliardSystem.API.csproj -c Release -
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 COPY --from=api-build /app/publish ./
 COPY --from=frontend-build /app/frontend/dist/billiard-frontend/browser/ ./wwwroot/
 RUN mkdir -p /app/data
