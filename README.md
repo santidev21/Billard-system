@@ -26,6 +26,11 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 | **Admin Auth** | Token-based authentication with 30-day sessions and PBKDF2 hashing |
 | **Real-time** | Instant updates across all devices via SignalR WebSockets |
 
+## To Do
+
+- [ ] Free-play mode: remove the "Cerrar" button from the "Partida terminada" modal — closing it leaves a blank screen.
+- [ ] Audit log: stop logging waiter calls and check requests. Only log session end, catalog modifications, table creation, table disable/delete, and price-per-hour changes.
+
 ## Screenshots
 
 <!-- Add your screenshots here -->
