@@ -18,6 +18,7 @@ networks:
   billard-net:
     name: billard-net
     driver: bridge
+    external: false
   billard-internal-net:
     name: billard-internal-net
     driver: bridge

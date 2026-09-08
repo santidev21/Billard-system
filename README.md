@@ -141,10 +141,21 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 # verify
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.local.yml ps
 docker logs -f billard
 docker exec billard-db-1 psql -U postgres -d billard -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
-# app at http://127.0.0.1:5000
+# app at http://127.0.0.1:5000 (health: http://localhost:5000/api/health)
+```
+
+#### Troubleshooting
+
+```bash
+# "The container name /billard is already in use" -> remove the stale container, then retry up
+docker rm -f billard
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+# localhost:5000 refuses connection -> you probably ran without the local override;
+# the base file publishes no ports. Always include both -f flags (see above).
 ```
 
 ---

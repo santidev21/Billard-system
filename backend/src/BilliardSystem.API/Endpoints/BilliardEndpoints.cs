@@ -452,7 +452,12 @@ public static class BilliardEndpoints
                     return Results.BadRequest(new { message = $"El código '{request.Code}' ya está en uso." });
                 table.SetCode(request.Code);
             }
-            if (request.HourlyRate is > 0 and <= 1_000_000) table.SetHourlyRate(request.HourlyRate);
+            if (request.HourlyRate is > 0 and <= 1_000_000 && request.HourlyRate != table.HourlyRate)
+            {
+                table.SetHourlyRate(request.HourlyRate);
+                await WriteAuditAsync(dbContext, AuditActionType.SettingsChanged, user.GetUserId(), table.Id, null, null,
+                    $"Tarifa por hora de '{table.Name}' actualizada a ${request.HourlyRate}", tenantId, ct);
+            }
 
             await dbContext.SaveChangesAsync(ct);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
@@ -475,6 +480,8 @@ public static class BilliardEndpoints
             else rateSetting.Update(request.HourlyRate.ToString());
 
             await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.SettingsChanged, user.GetUserId(), null, null, null,
+                $"Tarifa por hora actualizada a ${request.HourlyRate} en todas las mesas", tenantId, ct);
             await hub.Clients.Group($"admins:{tenantId}").SendAsync("TableStateUpdated", new { tableId = (Guid?)null, status = "RateChanged" }, ct);
             return Results.Ok(new { updated = tables.Count });
         }).RequireAuthorization("AdminSession");
@@ -503,6 +510,7 @@ public static class BilliardEndpoints
             if (table.ActiveMatchId is not null) return Results.BadRequest(new { message = "No se puede inhabilitar una mesa con partida activa." });
             table.Disable();
             await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.TableDeleted, user.GetUserId(), table.Id, null, null, $"Mesa inhabilitada '{table.Name}' (código {table.Code})", tenantId, ct);
             await hub.Clients.Group($"admins:{tenantId}").SendAsync("TableStateUpdated", new { tableId = id, status = table.Status.ToString() }, ct);
             return Results.Ok(new TableResponse(table.Id, table.Name, table.Code, table.Status.ToString(), table.HourlyRate, table.IsActive, table.ActiveMatchId));
         }).RequireAuthorization("AdminSession");
@@ -572,6 +580,7 @@ public static class BilliardEndpoints
                 return Results.BadRequest(new { message = "El precio debe estar entre 1 y 1.000.000." });
             product.Update(request.Name.Trim(), request.Price);
             await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.ProductChanged, user.GetUserId(), null, null, null, $"Producto modificado '{product.Name}' (${product.Price})", tenantId, ct);
             return Results.Ok();
         }).RequireAuthorization("AdminSession");
 
@@ -582,6 +591,7 @@ public static class BilliardEndpoints
             if (product is null) return Results.NotFound();
             product.Deactivate();
             await dbContext.SaveChangesAsync(ct);
+            await WriteAuditAsync(dbContext, AuditActionType.ProductChanged, user.GetUserId(), null, null, null, $"Producto desactivado '{product.Name}'", tenantId, ct);
             return Results.Ok();
         }).RequireAuthorization("AdminSession");
 
@@ -610,6 +620,9 @@ public static class BilliardEndpoints
                 else setting.Update(pair.Value);
             }
             await dbContext.SaveChangesAsync(ct);
+            if (values.TryGetValue("HourlyRate", out var rateValue))
+                await WriteAuditAsync(dbContext, AuditActionType.SettingsChanged, user.GetUserId(), null, null, null,
+                    $"Tarifa por hora actualizada a ${rateValue}", tenantId, ct);
             return Results.Ok();
         }).RequireAuthorization("AdminSession");
 
@@ -651,8 +664,6 @@ public static class BilliardEndpoints
             table.StartSession(match.Id, request.WhitePlayerName, request.YellowPlayerName, null);
             dbContext.MatchHistories.Add(match);
             await dbContext.SaveChangesAsync(ct);
-            await WriteAuditAsync(dbContext, AuditActionType.SessionStarted, null, table.Id, match.Id, request.TransactionId,
-                $"Inicio en {table.Name} (modo {request.GameMode})", tenant.Id, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("SessionStarted", new { tableId = table.Id, matchId = match.Id }, ct);
             await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("TableStateUpdated", new { tableId = table.Id, status = "Occupied" }, ct);
@@ -765,8 +776,6 @@ public static class BilliardEndpoints
 
             match.UpdateConsumption(consumptionId, request.Quantity);
             await dbContext.SaveChangesAsync(ct);
-            await WriteAuditAsync(dbContext, AuditActionType.ConsumptionUpdated, null, table.Id, match.Id, request.TransactionId,
-                $"Consumo actualizado cantidad={request.Quantity}", table.TenantId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
@@ -794,8 +803,6 @@ public static class BilliardEndpoints
 
             match.RemoveConsumption(consumptionId);
             await dbContext.SaveChangesAsync(ct);
-            await WriteAuditAsync(dbContext, AuditActionType.ConsumptionRemoved, null, table.Id, match.Id, transactionId,
-                $"Consumo {consumptionId} eliminado", table.TenantId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
@@ -819,7 +826,6 @@ public static class BilliardEndpoints
             {
                 table.MarkWaiterRequested(matchId);
                 await dbContext.SaveChangesAsync(ct);
-                await WriteAuditAsync(dbContext, AuditActionType.WaiterRequested, null, table.Id, matchId, null, "Llamada de mesero", tenant.Id, ct);
             }
             await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("AdminNotification", new { type = "waiter", tableId = id, tableName = table.Name, timestamp = DateTimeOffset.UtcNow }, ct);
             return Results.Ok();
@@ -845,7 +851,6 @@ public static class BilliardEndpoints
                 total = timeCost + consumptionTotal;
                 table.MarkCheckRequested(activeMatch);
                 await dbContext.SaveChangesAsync(ct);
-                await WriteAuditAsync(dbContext, AuditActionType.CheckRequested, null, table.Id, activeMatch, null, $"Solicitud de cuenta en {table.Name} · Total ${total}", tenant.Id, ct);
             }
             await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("AdminRequest", new { type = "check", tableId = id, tableName = table.Name, total = total, timestamp = DateTimeOffset.UtcNow }, ct);
             return Results.Ok();
