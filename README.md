@@ -214,5 +214,5 @@ Deploys happen automatically on push to `main` via GitHub Actions. For VPS setup
 
 ## To Do
 
-- [ ] Free-play mode: remove the "Cerrar" button from the "Partida terminada" modal — closing it leaves a blank screen.
-- [ ] Audit log: stop logging waiter calls and check requests. Only log session end, catalog modifications, table creation, table disable/delete, and price-per-hour changes.
+- [X] Free-play mode: remove the "Cerrar" button from the "Partida terminada" modal — closing it leaves a blank screen.
+- [X] Audit log: stop logging waiter calls and check requests. Only log session end, catalog modifications, table creation, table disable/delete, and price-per-hour changes.
