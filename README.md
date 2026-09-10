@@ -7,6 +7,8 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 ![Angular](https://img.shields.io/badge/Angular-22-red)
 ![SignalR](https://img.shields.io/badge/SignalR-real--time-green)
 
+![Billiard System - Vista Principal](docs/screenshots/dashboard.png)
+
 ---
 
 ## Features
@@ -202,10 +204,23 @@ Deploys happen automatically on push to `main` via GitHub Actions. For VPS setup
 
 ## Screenshots
 
-<!-- Add your screenshots here -->
-<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
-<!-- ![Player](docs/screenshots/player.png) -->
-<!-- ![Admin](docs/screenshots/admin.png) -->
+### Vista Principal
+Vista principal del sistema con mesas, estado y métricas en tiempo real.
+
+![Vista Principal](docs/screenshots/dashboard.png)
+`docs/screenshots/dashboard.png`
+
+### Panel de Administración
+Gestión de mesas, catálogo, historial y auditoría.
+
+![Panel de Administración](docs/screenshots/admin.png)
+`docs/screenshots/admin.png`
+
+### Panel de Login
+Acceso de administrador y entrada a modo libre.
+
+![Panel de Login](docs/screenshots/login.png)
+`docs/screenshots/login.png`
 
 ---
 
