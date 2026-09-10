@@ -3,14 +3,14 @@
     <h2>Acceso</h2>
     <p class="hint">Ingresa los datos de tu local para acceder.</p>
 
-    <label>Nombre del local</label>
-    <input [(ngModel)]="userName" name="userName" type="text" placeholder="Mi Billar" autocomplete="username" />
+    <label for="login-username">Nombre del local</label>
+    <input id="login-username" [(ngModel)]="userName" name="userName" type="text" placeholder="Mi Billar" autocomplete="username" />
 
-    <label>Clave</label>
-    <input [(ngModel)]="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <label for="login-password">Clave</label>
+    <input id="login-password" [(ngModel)]="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
 
     @if (error(); as e) {
-      <div class="error">{{ e }}</div>
+      <div class="error" role="alert">{{ e }}</div>
     }
 
     <button class="btn btn-primary" [disabled]="loading() || !userName || !password">

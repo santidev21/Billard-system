@@ -1,12 +1,12 @@
 @if (fill) {
   <div class="cam-fill">
-    <video #liveVideo autoplay muted playsinline class="live" [class.hidden]="!cam.cameraOn()"></video>
+    <video #liveVideo autoplay muted playsinline class="live" [class.hidden]="!cam.cameraOn()" aria-label="Vista en vivo de la mesa"></video>
     <div class="live-indicator on" [class.hidden]="!cam.cameraOn()">
       <span class="dot"></span> EN VIVO
     </div>
 
     @if (cam.devices().length > 1) {
-      <select class="overlay-device" [class.hidden]="!cam.cameraOn()" (change)="onDeviceChange($any($event.target).value)">
+      <select class="overlay-device" [class.hidden]="!cam.cameraOn()" aria-label="Seleccionar cámara" (change)="onDeviceChange($any($event.target).value)">
         @for (d of cam.devices(); track d.deviceId) {
           <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">{{ d.label || 'Cámara' }}</option>
         }
@@ -17,7 +17,7 @@
   </div>
 
   @if (cam.error()) {
-    <div class="cam-error">{{ cam.error() }}</div>
+    <div class="cam-error" role="alert">{{ cam.error() }}</div>
   }
 
   <app-replay-player [open]="replayOpen()" [src]="replayUrl()" (closed)="closeReplay()" />
@@ -26,7 +26,7 @@
     <div class="cam glass">
       @if (cam.cameraOn()) {
         <div class="feed-wrap">
-          <video #liveVideo autoplay muted playsinline class="live"></video>
+          <video #liveVideo autoplay muted playsinline class="live" aria-label="Vista en vivo de la mesa"></video>
           <div class="live-indicator on">
             <span class="dot"></span> EN VIVO
           </div>
@@ -40,7 +40,7 @@
 
       <div class="controls">
         @if (cam.devices().length > 1) {
-          <select class="device-select" (change)="onDeviceChange($any($event.target).value)">
+          <select class="device-select" aria-label="Seleccionar cámara" (change)="onDeviceChange($any($event.target).value)">
             @for (d of cam.devices(); track d.deviceId) {
               <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">{{ d.label || 'Cámara' }}</option>
             }
@@ -52,7 +52,7 @@
       </div>
 
       @if (cam.error()) {
-        <div class="cam-error">{{ cam.error() }}</div>
+        <div class="cam-error" role="alert">{{ cam.error() }}</div>
       }
 
       <div class="controls">

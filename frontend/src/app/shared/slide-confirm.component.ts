@@ -44,6 +44,18 @@ export class SlideConfirmComponent {
     window.addEventListener('pointerup', onUp);
   }
 
+  onSliderKeyDown(event: KeyboardEvent): void {
+    if (this.completed) {
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key === 'End' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.dragX = this.threshold;
+      this.completed = true;
+      setTimeout(() => this.confirmed.emit(), 250);
+    }
+  }
+
   close(): void {
     if (this.completed) {
       return;

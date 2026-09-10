@@ -1,3 +1,4 @@
+<button type="button" class="skip-link" (click)="skipToContent()">Saltar al contenido</button>
 <header class="topbar">
   <div class="tb-left">
     <a class="brand" routerLink="/login"><span class="ball-sm white-ball"></span><span class="ball-sm yellow-ball"></span><span class="ball-sm red-ball"></span> Billar</a>
@@ -24,7 +25,7 @@
     @switch (area()) {
       @case ('player') {
         @if (cam.available()) {
-          <button class="cam-toggle" [class.on]="cam.cameraOn()" (click)="toggleCamera()" [title]="cam.cameraOn() ? 'Apagar cámara' : 'Encender cámara'" [attr.aria-pressed]="cam.cameraOn()">
+          <button class="cam-toggle" [class.on]="cam.cameraOn()" (click)="toggleCamera()" [title]="cam.cameraOn() ? 'Apagar cámara' : 'Encender cámara'" [attr.aria-label]="cam.cameraOn() ? 'Apagar cámara' : 'Encender cámara'" [attr.aria-pressed]="cam.cameraOn()">
             <svg class="cam-vid-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="12.5" height="10" rx="2"></rect><path d="M15.5 9.5 20 7v10l-4.5-2.5z"></path></svg>
             <span class="cam-switch"><span class="cam-knob"></span></span>
           </button>
@@ -41,25 +42,25 @@
   </div>
 </header>
 
-<main class="shell">
+<main class="shell" id="main-content" tabindex="-1">
   <router-outlet />
 </main>
 
 @if (showChangePassword()) {
-  <div class="overlay">
-    <div class="card glass">
+  <div class="overlay" (keydown.escape)="closeChangePassword()">
+    <div class="card glass" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
       <header>
-        <h3>Actualizar clave de acceso</h3>
-        <button class="btn btn-outline close" (click)="closeChangePassword()">✕</button>
+        <h3 id="change-password-title">Actualizar clave de acceso</h3>
+        <button class="btn btn-outline close" (click)="closeChangePassword()" aria-label="Cerrar">✕</button>
       </header>
-      <label>Clave actual</label>
-      <input [(ngModel)]="currentPassword" type="password" placeholder="Clave actual" autocomplete="current-password" />
-      <label>Nueva clave</label>
-      <input [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 8 caracteres)" autocomplete="new-password" />
-      <label>Confirmar nueva clave</label>
-      <input [(ngModel)]="confirmPassword" type="password" placeholder="Repite la nueva clave" autocomplete="new-password" />
+      <label for="current-password">Clave actual</label>
+      <input id="current-password" [(ngModel)]="currentPassword" type="password" placeholder="Clave actual" autocomplete="current-password" />
+      <label for="new-password">Nueva clave</label>
+      <input id="new-password" [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 8 caracteres)" autocomplete="new-password" />
+      <label for="confirm-password">Confirmar nueva clave</label>
+      <input id="confirm-password" [(ngModel)]="confirmPassword" type="password" placeholder="Repite la nueva clave" autocomplete="new-password" />
       @if (passwordError(); as e) {
-        <div class="error">{{ e }}</div>
+        <div class="error" role="alert">{{ e }}</div>
       }
       <div class="actions">
         <button class="btn btn-primary" [disabled]="saving() || !currentPassword || !newPassword || !confirmPassword" (click)="savePassword()">

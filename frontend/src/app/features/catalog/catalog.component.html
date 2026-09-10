@@ -6,8 +6,8 @@
   }
 
   <div class="form glass">
-    <input [(ngModel)]="newProductName" placeholder="Nombre del producto" />
-    <input [(ngModel)]="newProductPrice" type="number" placeholder="Precio" />
+    <input [(ngModel)]="newProductName" placeholder="Nombre del producto" aria-label="Nombre del producto" />
+    <input [(ngModel)]="newProductPrice" type="number" placeholder="Precio" aria-label="Precio del producto" />
     <button class="btn btn-primary" (click)="addProduct()" [disabled]="loading() || !newProductName.trim() || newProductPrice <= 0">
       @if (loading()) {
         <app-spinner [label]="'Guardando…'" />

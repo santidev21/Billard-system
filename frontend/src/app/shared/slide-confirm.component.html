@@ -1,10 +1,13 @@
 @if (open) {
-  <div class="overlay" (click)="close()">
-    <div class="card" (click)="$event.stopPropagation()">
-      <h3>{{ title }}</h3>
+  <div class="overlay" (click)="close()" (keydown.escape)="close()">
+    <div class="card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="slide-confirm-title">
+      <h3 id="slide-confirm-title">{{ title }}</h3>
       <p>{{ message }}</p>
 
-      <div class="slider" (pointerdown)="onPointerDown($event)">
+      <div class="slider" (pointerdown)="onPointerDown($event)"
+        role="slider" tabindex="0" aria-label="Deslizar para confirmar"
+        aria-valuemin="0" [attr.aria-valuemax]="threshold" [attr.aria-valuenow]="dragX"
+        (keydown)="onSliderKeyDown($event)">
         <div class="slider-fill" [style.width.%]="(dragX / threshold) * 100"></div>
         <div class="slider-hint">{{ completed ? 'Cerrado ✓' : 'Desliza para confirmar' }}</div>
         <div

@@ -1,11 +1,11 @@
 @if (open && src) {
-  <div class="overlay">
-    <div class="card">
+  <div class="overlay" (keydown.escape)="close()">
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="replay-title">
       <header>
-        <h3>Repetición instantánea</h3>
-        <button class="btn btn-outline close" (click)="close()">✕</button>
+        <h3 id="replay-title">Repetición instantánea</h3>
+        <button class="btn btn-outline close" (click)="close()" aria-label="Cerrar">✕</button>
       </header>
-      <video #videoEl controls autoplay muted></video>
+      <video #videoEl controls autoplay muted aria-label="Repetición instantánea de la jugada"></video>
       <div class="controls">
         <button class="btn btn-outline" (click)="playPause()">Play/Pause</button>
         <button class="btn btn-outline" (click)="setRate(0.25)">0.25x</button>

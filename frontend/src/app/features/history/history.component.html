@@ -33,17 +33,17 @@
 </section>
 
 @if (showRounds()) {
-  <div class="rounds-overlay overlay" (click)="closeRounds()">
-    <div class="card glass" (click)="$event.stopPropagation()">
+  <div class="rounds-overlay overlay" (click)="closeRounds()" (keydown.escape)="closeRounds()">
+    <div class="card glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="history-rounds-title">
       <header>
-        <h3>
+        <h3 id="history-rounds-title">
           @if (selectedMatch(); as d) {
             {{ d.whitePlayerName }} vs {{ d.yellowPlayerName }}
           } @else {
             Rondas
           }
         </h3>
-        <button class="btn btn-outline close" (click)="closeRounds()">✕</button>
+        <button class="btn btn-outline close" (click)="closeRounds()" aria-label="Cerrar">✕</button>
       </header>
       @if (loadingDetail()) {
         <div class="spinner-center"><app-spinner [label]="'Cargando rondas…'" /></div>

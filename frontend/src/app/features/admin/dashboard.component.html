@@ -1,7 +1,7 @@
 <section class="dash">
-  <div class="notif-panel">
+  <div class="notif-panel" role="status">
     @for (n of notifications(); track n.id) {
-      <div class="notif" [class.check]="n.type === 'check'"><span>{{ n.text }}</span><button class="notif-x" (click)="dismissNotification(n.id)">✕</button></div>
+      <div class="notif" [class.check]="n.type === 'check'"><span>{{ n.text }}</span><button class="notif-x" (click)="dismissNotification(n.id)" aria-label="Descartar notificación">✕</button></div>
     }
   </div>
 
@@ -12,8 +12,8 @@
 
   @if (showAddTable()) {
     <div class="add-table glass">
-      <input [(ngModel)]="newTableName" placeholder="Nombre (ej. Mesa 2)" />
-      <input [(ngModel)]="newTableCode" placeholder="Código corto (ej. M2, opcional)" style="max-width: 180px" />
+      <input [(ngModel)]="newTableName" placeholder="Nombre (ej. Mesa 2)" aria-label="Nombre de la mesa" />
+      <input [(ngModel)]="newTableCode" placeholder="Código corto (ej. M2, opcional)" aria-label="Código corto de la mesa (opcional)" style="max-width: 180px" />
       <button class="btn btn-primary" (click)="addTable()">Guardar Mesa</button>
       <button class="btn btn-outline" (click)="showAddTable.set(false)">Cancelar</button>
     </div>
@@ -31,7 +31,7 @@
 
   @if (showRateCard()) {
     <div class="add-table glass">
-      <input [(ngModel)]="newTableRate" type="number" placeholder="Nueva tarifa por hora (todas las mesas)" />
+      <input [(ngModel)]="newTableRate" type="number" placeholder="Nueva tarifa por hora (todas las mesas)" aria-label="Nueva tarifa por hora para todas las mesas" />
       <button class="btn btn-primary" (click)="saveAllRates()">Aplicar a todas</button>
     </div>
   }
@@ -75,7 +75,7 @@
           }
           <span class="status">{{ statusName(table.status) }}@if (!table.isActive) { · Inhabilitada}</span>
           @if (table.status === 'Available') {
-            <button class="mini del" title="Eliminar mesa" (click)="$event.stopPropagation(); deleteTable(table.id)">✕</button>
+            <button class="mini del" title="Eliminar mesa" aria-label="Eliminar mesa" (click)="$event.stopPropagation(); deleteTable(table.id)">✕</button>
           }
         </div>
         @if (!table.isActive) {
@@ -124,11 +124,11 @@
   }
 
   @if (selectedTable(); as t) {
-    <div class="table-modal overlay" (click)="closeTable()">
-      <div class="modal-card glass" (click)="$event.stopPropagation()">
+    <div class="table-modal overlay" (click)="closeTable()" (keydown.escape)="closeTable()">
+      <div class="modal-card glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="table-modal-title">
         <header>
-          <h3>{{ t.name }} @if (t.code) { · <span class="code">{{ t.code }}</span> }</h3>
-          <button class="btn btn-outline close" (click)="closeTable()">✕</button>
+          <h3 id="table-modal-title">{{ t.name }} @if (t.code) { · <span class="code">{{ t.code }}</span> }</h3>
+          <button class="btn btn-outline close" (click)="closeTable()" aria-label="Cerrar">✕</button>
         </header>
 
         @if (t.code) {
@@ -173,16 +173,16 @@
                     <div class="consumo-row">
                       @if (editingConsumptionId === c.id) {
                         <span class="consumo-name">{{ c.productName }}</span>
-                        <input type="number" [(ngModel)]="editQuantity" min="1" max="999" class="consumo-qty-input" />
+                        <input type="number" [(ngModel)]="editQuantity" min="1" max="999" class="consumo-qty-input" [attr.aria-label]="'Cantidad de ' + c.productName" />
                         <span class="consumo-sub">${{ fmtMoney(c.unitPrice * editQuantity) }}</span>
                         <button class="mini primary" (click)="saveEditConsumption(t.id, c.id)">OK</button>
-                        <button class="mini" (click)="cancelEditConsumption()">✕</button>
+                        <button class="mini" (click)="cancelEditConsumption()" aria-label="Cancelar edición">✕</button>
                       } @else {
                         <span class="consumo-name">{{ c.productName }}</span>
                         <span class="consumo-qty">x{{ c.quantity }}</span>
                         <span class="consumo-sub">${{ fmtMoney(c.total) }}</span>
                         <button class="mini" (click)="startEditConsumption(c.id, c.quantity)">Editar</button>
-                        <button class="mini danger" (click)="removeConsumptionFromTable(t.id, c.id)">✕</button>
+                        <button class="mini danger" (click)="removeConsumptionFromTable(t.id, c.id)" [attr.aria-label]="'Eliminar ' + c.productName">✕</button>
                       }
                     </div>
                   }
@@ -190,13 +190,13 @@
               }
               @if (consumptionProducts().length) {
                 <div class="add-consumo">
-                  <select [(ngModel)]="toastProductId">
+                  <select [(ngModel)]="toastProductId" aria-label="Producto a agregar">
                     <option value="" disabled>Agregar consumo…</option>
                     @for (p of consumptionProducts(); track p.id) {
                       <option [value]="p.id">{{ p.name }} — ${{ fmtMoney(p.price) }}</option>
                     }
                   </select>
-                  <input type="number" [(ngModel)]="toastQuantity" min="1" max="999" class="consumo-qty-input" />
+                  <input type="number" [(ngModel)]="toastQuantity" min="1" max="999" class="consumo-qty-input" aria-label="Cantidad" />
                   <button class="btn btn-primary" [disabled]="!toastProductId || toastQuantity < 1" (click)="addConsumptionToTable(t.id)">Agregar</button>
                 </div>
               } @else {
@@ -208,8 +208,8 @@
             </div>
         } @else {
           <div class="start-form">
-            <input [(ngModel)]="selectedWhite" placeholder="Jugador blanco" />
-            <input [(ngModel)]="selectedYellow" placeholder="Jugador amarillo" />
+            <input [(ngModel)]="selectedWhite" placeholder="Jugador blanco" aria-label="Nombre del jugador blanco" />
+            <input [(ngModel)]="selectedYellow" placeholder="Jugador amarillo" aria-label="Nombre del jugador amarillo" />
             <button class="btn btn-primary" (click)="confirmStart(t.id)">Iniciar sesión</button>
           </div>
         }
@@ -219,11 +219,11 @@
 
   @if (showFinishConfirm() && selectedTable(); as t) {
     @if (finishSummary(); as fs) {
-      <div class="table-modal overlay" (click)="showFinishConfirm.set(false)">
-        <div class="modal-card glass" (click)="$event.stopPropagation()">
+      <div class="table-modal overlay" (click)="showFinishConfirm.set(false)" (keydown.escape)="showFinishConfirm.set(false)">
+        <div class="modal-card glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="finish-confirm-title">
           <header>
-            <h3>Cerrar {{ t.name }}</h3>
-            <button class="btn btn-outline close" (click)="showFinishConfirm.set(false)">✕</button>
+            <h3 id="finish-confirm-title">Cerrar {{ t.name }}</h3>
+            <button class="btn btn-outline close" (click)="showFinishConfirm.set(false)" aria-label="Cerrar">✕</button>
           </header>
           <div class="modal-match">
             <div class="mp">Tiempo <b>{{ fs.elapsed }}</b></div>

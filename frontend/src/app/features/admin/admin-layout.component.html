@@ -12,10 +12,10 @@
 </div>
 
 @if (callPopup(); as n) {
-  <div class="popup-backdrop" (click)="closePopup()">
-    <div class="popup-card glass" (click)="$event.stopPropagation()">
-      <div class="popup-icon">🔔</div>
-      <h3>{{ popupTitle(n) }}</h3>
+  <div class="popup-backdrop" (click)="closePopup()" (keydown.escape)="closePopup()">
+    <div class="popup-card glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="call-popup-title">
+      <div class="popup-icon" aria-hidden="true">🔔</div>
+      <h3 id="call-popup-title">{{ popupTitle(n) }}</h3>
       <p>{{ popupBody(n) }}</p>
       <div class="popup-actions">
         <button class="btn btn-primary" (click)="attendFromPopup(n)">Atender ahora</button>

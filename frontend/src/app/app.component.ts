@@ -82,6 +82,10 @@ export class AppComponent implements OnInit {
     void this.cam.toggle();
   }
 
+  skipToContent(): void {
+    document.getElementById('main-content')?.focus();
+  }
+
   async logout(): Promise<void> {
     if (this.area() === 'admin' || this.area() === 'super') {
       await this.signalr.leaveAdminGroup();

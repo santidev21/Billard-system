@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 
 # Billard Production Deployment Script
 # Usage: ./deploy.sh [pull|build|up|deploy|status|rollback|logs|verify]
@@ -8,6 +8,8 @@ DEPLOY_DIR="/opt/billard"
 BACKUP_DIR="/tmp/billard-backup-$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="/tmp/billard-deploy.log"
 MAX_BACKUPS=5
+
+trap 'log "ERROR: command failed at line $LINENO"' ERR
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -47,10 +49,17 @@ backup() {
         log "Creating backup at $BACKUP_DIR..."
         cp -r "$DEPLOY_DIR" "$BACKUP_DIR"
         chmod 700 "$BACKUP_DIR"
-        BACKUP_COUNT=$(ls -dt /tmp/billard-backup-* 2>/dev/null | wc -l)
-        if [ "$BACKUP_COUNT" -gt "$MAX_BACKUPS" ]; then
+        # Rotate old backups via glob array (never parse ls; safe with odd filenames).
+        # Lexical order == chronological order for YYYYMMDD-HHMMSS names.
+        shopt -s nullglob
+        local backups=(/tmp/billard-backup-*)
+        shopt -u nullglob
+        if [[ "${#backups[@]}" -gt "$MAX_BACKUPS" ]]; then
             log "Rotating backups (keeping last $MAX_BACKUPS)..."
-            ls -dt /tmp/billard-backup-* 2>/dev/null | tail -n +$((MAX_BACKUPS + 1)) | xargs rm -rf 2>/dev/null || true
+            local to_delete=$(( ${#backups[@]} - MAX_BACKUPS ))
+            for (( i = 0; i < to_delete; i++ )); do
+                rm -rf -- "${backups[$i]}" || true
+            done
         fi
         log "Backup created with permissions 700."
     fi
@@ -70,8 +79,14 @@ backup_database() {
         return 0
     fi
 
-    local PG_PASSWORD
-    PG_PASSWORD=$(grep -E "^POSTGRES_PASSWORD=" "$DEPLOY_DIR/.env" | cut -d'=' -f2-)
+    # Tolerates optional "export" prefix, surrounding whitespace and quotes.
+    local env_line
+    env_line=$(grep -E "^[[:space:]]*(export[[:space:]]+)?POSTGRES_PASSWORD=" "$DEPLOY_DIR/.env" 2>/dev/null | tail -n 1 || true)
+    local PG_PASSWORD="${env_line#*=}"
+    PG_PASSWORD="${PG_PASSWORD#"${PG_PASSWORD%%[![:space:]]*}"}"
+    PG_PASSWORD="${PG_PASSWORD%"${PG_PASSWORD##*[![:space:]]}"}"
+    PG_PASSWORD="${PG_PASSWORD%\"}"; PG_PASSWORD="${PG_PASSWORD#\"}"
+    PG_PASSWORD="${PG_PASSWORD%\'}"; PG_PASSWORD="${PG_PASSWORD#\'}"
     if [ -z "$PG_PASSWORD" ]; then
         log "WARNING: POSTGRES_PASSWORD not found in .env. Skipping database backup."
         return 0
@@ -114,7 +129,7 @@ wait_healthy() {
     local INTERVAL=5
     local ELAPSED=0
 
-    while [ $ELAPSED -lt $TIMEOUT ]; do
+    while [[ $ELAPSED -lt $TIMEOUT ]]; do
         local DB_OK=0
         local APP_OK=0
 
@@ -139,7 +154,7 @@ wait_healthy() {
         fi
 
         log "Waiting... ($ELAPSED/$TIMEOUT seconds) db=$DB_OK app=$APP_OK"
-        sleep $INTERVAL
+        sleep "$INTERVAL"
         ELAPSED=$((ELAPSED + INTERVAL))
     done
 
@@ -173,10 +188,14 @@ logs() {
 
 rollback() {
     log "=== Starting rollback ==="
-    LATEST_BACKUP=$(ls -dt /tmp/billard-backup-* 2>/dev/null | head -1)
-    if [ -z "$LATEST_BACKUP" ]; then
+    # Newest backup = last in lexical order for timestamped names.
+    shopt -s nullglob
+    local backups=(/tmp/billard-backup-*)
+    shopt -u nullglob
+    if [[ "${#backups[@]}" -eq 0 ]]; then
         error_exit "No backup found for rollback"
     fi
+    LATEST_BACKUP="${backups[${#backups[@]}-1]}"
     log "Rolling back to $LATEST_BACKUP..."
 
     cd "$DEPLOY_DIR"
@@ -232,6 +251,24 @@ deploy() {
     status
 }
 
+usage() {
+    cat <<EOF
+Usage: $0 [COMMAND]
+
+Commands:
+    pull       Fetch latest code (git fetch + reset --hard origin/main)
+    build      Build containers (docker compose build --no-cache)
+    up         Start containers (docker compose up -d --remove-orphans)
+    deploy     Full deployment: validate, backup, pull, build, up, verify (default)
+    status     Show container status and recent logs
+    rollback   Restore the newest /tmp/billard-backup-* snapshot
+    logs       Tail container logs
+    verify     Check that the billard container is healthy
+    help       Show this help message
+EOF
+    exit "${1:-0}"
+}
+
 case "${1:-deploy}" in
     pull) pull ;;
     build) build ;;
@@ -241,8 +278,9 @@ case "${1:-deploy}" in
     rollback) rollback ;;
     logs) logs ;;
     verify) verify ;;
+    help|-h|--help) usage 0 ;;
     *)
-        echo "Usage: $0 [pull|build|up|deploy|status|rollback|logs|verify]"
-        exit 1
+        echo "ERROR: Unknown command: $1" >&2
+        usage 1
         ;;
 esac
