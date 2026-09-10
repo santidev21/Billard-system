@@ -1,3 +1,8 @@
+---
+description: Playbook for the Billard-system Admin panel (dashboard, tables, catalog, history, audit, settings). Use when working on frontend/src/app/features/admin.
+mode: subagent
+---
+
 # Agente Admin
 
 Playbook para el panel de administración (`frontend/src/app/features/admin`).

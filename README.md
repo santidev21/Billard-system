@@ -89,9 +89,11 @@ Billard-system/
 │       ├── features/      # Admin, Player, Catalog, History, Audit
 │       └── shared/        # Reusable components
 ├── deploy/                # Nginx config, deployment guide
-├── ai-context/            # Project documentation
+├── docs/                  # Guides, screenshots, specs (docs/specs/)
+├── .opencode/             # AI home: agent/, command/, skills/
 ├── Dockerfile             # Multi-stage build
-└── docker-compose.yml     # Container orchestration
+├── docker-compose.yml     # Container orchestration
+├── opencode.json          # opencode config (instructions, MCP, permissions)
 ```
 
 ---
@@ -257,7 +259,12 @@ Acceso de administrador y entrada a modo libre.
 
 ## AI Context
 
-[ai-context/](ai-context/) is the canonical project context for AI-assisted work (architecture snapshot, specs, agents, and skills).
+- [AGENTS.md](AGENTS.md) — project snapshot (stack, layout, commands, working rules)
+- [opencode.json](opencode.json) — instructions, MCP servers and permissions
+- [.opencode/agent/](.opencode/agent/) — per-area playbooks (backend, frontend, reviewer)
+- [.opencode/skills/](.opencode/skills/) — task playbooks (migrations, tests, docker, contracts)
+- [.opencode/command/](.opencode/command/) — shortcuts (`/test`, `/migrate`)
+- [docs/specs/](docs/specs/) — architecture, auth, database detail specs
 
 ---
 

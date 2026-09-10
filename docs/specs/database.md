@@ -1,9 +1,13 @@
 # 04 - Modelo de Base de Datos (Database Model)
 
 ## Motor de Base de Datos
-- **Principal**: SQLite via Entity Framework Core 9.
-- **Archivo local**: `billiard_system.db` ubicado en el directorio de la aplicación.
-- **Portabilidad**: Mantiene abstracciones limpias mediante DbContext, facilitando migración transparente a PostgreSQL/SQL Server si se escala a la nube.
+- **Actual (2026-09)**: PostgreSQL 16 via Entity Framework Core 10. Migraciones en `backend/src/BilliardSystem.Infrastructure/Migrations`, auto-aplicadas al arrancar (`DatabaseInitializer`). Nunca editar una migración aplicada. Ver [db-migrations](../../.opencode/skills/db-migrations/SKILL.md).
+- **Origen**: SQLite via EF Core fue el motor inicial (despliegue LAN, `billiard_system.db`). El esquema de tablas abajo se mantiene vigente.
+- Verificar migraciones aplicadas:
+  ```bash
+  docker exec -e PGPASSWORD=postgres billard-db-1 psql -U postgres -d billiard \
+    -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
+  ```
 
 ## Tablas y Estructura
 

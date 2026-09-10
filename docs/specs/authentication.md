@@ -28,7 +28,15 @@
 3. Si es válido, retorna el token JWT conteniendo las Claims: `sub` (UserId), `name` (FullName), `role` (Administrador/Empleado).
 4. El cliente Angular guarda el token en memoria/HTTP-Only Cookie y lo envía en el header `Authorization: Bearer <token>` en cada petición HTTP y en la reconexión de SignalR WebSockets.
 
-## Estado Implementado Actual - 2026-08-08
+## Estado Implementado Actual - 2026-09
+- **Sesiones opacas**: tokens de 32 bytes hasheados con SHA-256 en DB, expiración deslizante de 30 días.
+- **Hashing PBKDF2** (100k iteraciones, salt aleatorio).
+- Endpoints admin protegidos; endpoints de player/quiosco anónimos por diseño.
+- Rate limiting: login 5 req/min, API general 60 req/min.
+- Bootstrap: password `admin` por defecto (cambio forzado al primer ingreso); seed vía `SUPER_USERNAME` / `SUPER_PASSWORD`.
+- Ver el catálogo de endpoints en [api.md](api.md) y el resumen en [../../AGENTS.md](../../AGENTS.md).
+
+## Estado Implementado - 2026-08-08 (histórico)
 - **Login solo con clave (sin usuario)**: `POST /api/auth/login` recibe únicamente `{ password }`. No importa el usuario; el único acceso admin es la clave de ingreso.
   - Si aún no existe `AdminPassword` en `Settings`, el primer login la crea (hash SHA256 hex) y entra.
   - Si ya existe, valida el hash; si no coincide retorna `401`.

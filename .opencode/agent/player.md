@@ -1,3 +1,8 @@
+---
+description: Playbook for the Billard-system Player table kiosk (score, rounds, consumptions, waiter calls). Use when working on frontend/src/app/features/player.
+mode: subagent
+---
+
 # Agente Player
 
 Playbook para el quiosco de mesa (`frontend/src/app/features/player`).
