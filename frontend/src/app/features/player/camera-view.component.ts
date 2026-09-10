@@ -1,6 +1,6 @@
-import { Component, inject, OnDestroy, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
+import { Component, effect, inject, Input, OnDestroy, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
 
-import { CircularVideoBuffer } from '../../core/circular-video-buffer.service';
+import { CameraService } from '../../core/camera.service';
 import { ReplayPlayerComponent } from '../../shared/replay-player.component';
 
 @Component({
@@ -11,108 +11,49 @@ import { ReplayPlayerComponent } from '../../shared/replay-player.component';
   standalone: true,
 })
 export class CameraViewComponent implements OnInit, OnDestroy {
-  private readonly buffer = inject(CircularVideoBuffer);
+  protected readonly cam = inject(CameraService);
   @ViewChild('liveVideo') liveVideo!: ElementRef<HTMLVideoElement>;
 
-  readonly available = signal(false);
-  readonly cameraOn = signal(false);
-  readonly devices = signal<MediaDeviceInfo[]>([]);
-  readonly selectedDeviceId = signal('');
-  readonly error = signal<string | null>(null);
+  @Input() fill = false;
+
   readonly replayOpen = signal(false);
   readonly replayUrl = signal<string | null>(null);
 
   private attached = false;
 
-  async ngOnInit(): Promise<void> {
-    if (!navigator.mediaDevices?.enumerateDevices) {
-      return;
-    }
-
-    await this.enumerateDevices();
-
-    if (navigator.mediaDevices.addEventListener) {
-      navigator.mediaDevices.addEventListener('devicechange', () => {
-        this.enumerateDevices();
-      });
-    }
-  }
-
-  private async enumerateDevices(): Promise<void> {
-    try {
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = all.filter((d) => d.kind === 'videoinput');
-      this.devices.set(videoDevices);
-
-      if (videoDevices.length === 0) {
-        this.available.set(false);
-        return;
-      }
-
-      this.available.set(true);
-      if (!this.selectedDeviceId() || !videoDevices.find((d) => d.deviceId === this.selectedDeviceId())) {
-        this.selectedDeviceId.set(videoDevices[0].deviceId);
-      }
-    } catch {
-      this.available.set(false);
-    }
-  }
-
-  async toggleCamera(): Promise<void> {
-    if (this.cameraOn()) {
-      this.stopCamera();
-      return;
-    }
-
-    this.error.set(null);
-    try {
-      await this.buffer.start(this.selectedDeviceId() || undefined);
-      this.cameraOn.set(true);
-      this.attached = false;
-      await this.attachStream();
-    } catch (e: any) {
-      this.cameraOn.set(false);
-      if (e?.name === 'NotAllowedError') {
-        this.error.set('Permiso de cámara denegado. Permití el acceso en el navegador.');
-      } else if (e?.name === 'NotFoundError') {
-        this.error.set('No se encontró ninguna cámara.');
-        this.available.set(false);
-      } else if (e?.name === 'NotReadableError') {
-        this.error.set('Cámara en uso por otra aplicación.');
+  constructor() {
+    effect(() => {
+      if (this.cam.cameraOn()) {
+        void this.attachIfReady();
       } else {
-        this.error.set('No se pudo acceder a la cámara.');
+        this.attached = false;
       }
-    }
+    });
   }
 
-  private stopCamera(): void {
-    this.buffer.stop();
-    this.cameraOn.set(false);
-    const el = this.liveVideo?.nativeElement;
-    if (el) {
-      el.srcObject = null;
-    }
-    this.attached = false;
+  async ngOnInit(): Promise<void> {
+    await this.cam.init();
   }
 
-  private async attachStream(): Promise<void> {
-    const el = this.liveVideo?.nativeElement;
-    if (el && !this.attached) {
-      el.srcObject = await this.buffer.activeStream();
+  async attachIfReady(): Promise<void> {
+    if (this.cam.cameraOn() && this.liveVideo?.nativeElement && !this.attached) {
+      this.liveVideo.nativeElement.srcObject = await this.cam.activeStream();
       this.attached = true;
     }
   }
 
+  onToggle(): void {
+    void this.cam.toggle();
+    this.attached = false;
+  }
+
   onDeviceChange(deviceId: string): void {
-    this.selectedDeviceId.set(deviceId);
-    if (this.cameraOn()) {
-      this.stopCamera();
-      this.toggleCamera();
-    }
+    this.cam.onDeviceChange(deviceId);
+    this.attached = false;
   }
 
   async openReplay(): Promise<void> {
-    const url = await this.buffer.captureFrame();
+    const url = await this.cam.captureFrame();
     if (url) {
       this.replayUrl.set(url);
       this.replayOpen.set(true);
@@ -128,6 +69,6 @@ export class CameraViewComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stopCamera();
+    this.cam.stop();
   }
 }

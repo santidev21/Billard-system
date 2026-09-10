@@ -1,9 +1,4 @@
 <div class="super-layout">
-  <div class="super-head">
-    <h2>Panel Super Admin</h2>
-    <button class="btn btn-outline" (click)="logout()">Cerrar sesión</button>
-  </div>
-
   <div class="super-tabs">
     <button class="tab" [class.active]="activeTab() === 'locales'" (click)="switchTab('locales')">Locales</button>
     <button class="tab" [class.active]="activeTab() === 'recoveries'" (click)="switchTab('recoveries')">Recuperaciones</button>

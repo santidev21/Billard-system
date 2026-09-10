@@ -8,17 +8,6 @@
 .player-shell { display: flex; flex-direction: column; gap: 0.75rem; height: 100%; flex: 1; min-height: 0; }
 .player-loading { display: flex; justify-content: center; padding: 3rem 0; }
 
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.panel-head h2 { margin: 0; font-size: 1.5rem; }
-.table-badge {
-  font-weight: 900;
-  font-size: 0.95rem;
-  letter-spacing: 0.06em;
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  background: var(--pa-color);
-  color: #fff;
-}
 .start-box {
   display: flex;
   flex-direction: column;
@@ -28,18 +17,7 @@
   background: var(--slate-light);
   border-radius: var(--radius);
 }
-.start-box .names { display: flex; flex-direction: column; gap: 0.4rem; width: min(420px, 100%); }
-.start-box label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
-.start-box input {
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.25);
-  color: var(--text-primary);
-  font-size: 1.05rem;
-  margin-bottom: 0.5rem;
-}
-.big { font-size: 1.2rem; padding: 1rem 2.5rem; }
+.waiting-msg { color: var(--text-muted); font-size: 1.05rem; text-align: center; }
 
 .arena {
   display: grid;
@@ -120,15 +98,36 @@
 
 .center-col { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; overflow: hidden; }
 
-.virtual-table { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+/* Stage: fixed box for camera OR virtual-table */
+.stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* Virtual table — centered 2:1 billiard proportions, same box as camera */
+.virtual-table {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+}
 .table-felt {
   position: relative;
   width: 100%;
-  max-width: 340px;
-  aspect-ratio: 1.7;
+  aspect-ratio: 2 / 1;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: 18px;
   background: radial-gradient(circle at 40% 35%, #2f7d4f, #1c4f31 70%);
-  border: 14px solid #6b4a2c;
+  border: min(14px, 1.8vw) solid #6b4a2c;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   display: flex;
@@ -159,6 +158,9 @@
 .r-ball { background: radial-gradient(circle at 35% 30%, #ff8a80, #c62828); }
 .t-head { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.85); }
 .t-carambolas { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; }
+
+/* Camera-live switching: hide table when camera is on */
+.stage.camera-live .virtual-table { display: none; }
 
 .info-bar {
   display: grid;
@@ -201,7 +203,6 @@
 .es-row span { color: var(--text-muted); }
 .es-row b { font-size: 1.15rem; }
 .es-row.grand b { color: var(--pa-color); font-size: 1.6rem; }
-.waiting-msg { color: var(--text-muted); font-size: 1.05rem; text-align: center; }
 
 .overlay {
   position: fixed;
@@ -241,15 +242,7 @@
 .rounds-overlay th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
 .rk-leader { margin-top: 0.9rem; font-weight: 700; color: var(--pa-color); }
 
-.brand {
-  text-align: center;
-  font-weight: 900;
-  font-size: 1.5rem;
-  letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.08);
-  padding: 0.15rem 0 0;
-}
-
+/* ── Responsive ── */
 @media (max-width: 900px) {
   .arena { grid-template-columns: 1fr 1fr; }
   .center-col { grid-column: 1 / -1; }
@@ -277,15 +270,14 @@
   .player-name input { font-size: 0.85rem; padding: 0.35rem 0.4rem; }
   .ball { width: 30px; height: 30px; }
   .badge { font-size: 0.65rem; }
-  .virtual-table { flex: none; min-height: 0; }
-  .table-felt { max-width: 300px; }
+  .stage { flex: none; height: auto; aspect-ratio: 2 / 1; max-width: 320px; margin: 0 auto; }
+  .virtual-table { position: static; display: flex; }
+  .table-felt { position: relative; width: 100%; aspect-ratio: 2 / 1; max-width: 100%; max-height: none; inset: auto; }
   .toolbar { gap: 0.35rem; padding: 0.5rem 0.6rem; }
   .toolbar .btn { min-width: 100px; font-size: 0.85rem; padding: 0.7rem 0.8rem; }
   .info-bar { gap: 0.3rem; padding: 0.5rem 0.6rem; }
   .timer { font-size: 1.3rem; }
   .amt { font-size: 1.05rem; }
-  .panel-head h2 { font-size: 1.2rem; }
-  .table-badge { font-size: 0.8rem; padding: 0.3rem 0.7rem; }
   .start-box { padding: 2rem 1rem; }
 }
 @media (max-width: 480px) {

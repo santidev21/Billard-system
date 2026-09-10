@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { SignalRService } from '../../core/signalr.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { CameraService } from '../../core/camera.service';
+import { PlayerUiService } from '../../core/player-ui.service';
 import { GameMode, TableDetail } from '../../core/models';
 import { CameraViewComponent } from './camera-view.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
@@ -29,6 +31,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private readonly signalr = inject(SignalRService);
   private readonly queue = inject(OfflineQueueService);
   private readonly route = inject(ActivatedRoute);
+  readonly cam = inject(CameraService);
+  private readonly playerUi = inject(PlayerUiService);
 
   readonly gameMode = signal<GameMode>('FreeMode');
   readonly blockedMsg = signal<string | null>(null);
@@ -255,6 +259,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.yellowName.set('Jugador 2');
     this.whiteInput = 'Jugador 1';
     this.yellowInput = 'Jugador 2';
+    this.playerUi.reset();
     if (this.tickTimer) clearInterval(this.tickTimer);
     if (this.pollTimer) clearInterval(this.pollTimer);
   }
@@ -326,6 +331,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       const detail = await this.api.getTenantTable(slug, identifier);
       this.tableId.set(detail.id);
       this.tableName.set(detail.name);
+      this.playerUi.setTableName(detail.name);
       this.hourlyRate.set(String(detail.hourlyRate));
       localStorage.setItem('tableName', detail.name);
       localStorage.setItem('defaultRate', String(detail.hourlyRate));
@@ -342,6 +348,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       if (pick) {
         this.tableId.set(pick.id);
         this.tableName.set(pick.name);
+        this.playerUi.setTableName(pick.name);
         this.hourlyRate.set(String(pick.hourlyRate));
         localStorage.setItem('tableName', pick.name);
         localStorage.setItem('defaultRate', String(pick.hourlyRate));

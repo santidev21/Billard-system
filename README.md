@@ -7,9 +7,6 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 ![Angular](https://img.shields.io/badge/Angular-22-red)
 ![SignalR](https://img.shields.io/badge/SignalR-real--time-green)
 
-<!-- Hero screenshot -->
-<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
-
 ---
 
 ## Features
@@ -35,7 +32,7 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 
 - **Frontend**: [Angular 22](https://angular.dev/) (standalone components, signals, lazy routes)
 - **Backend**: [.NET 10](https://dotnet.microsoft.com/) Minimal API with Clean Architecture
-- **Database**: SQLite via Entity Framework Core
+- **Database**: PostgreSQL via Entity Framework Core
 - **Real-time**: [SignalR](https://learn.microsoft.com/aspnet/core/signalr/) WebSockets
 - **Auth**: Custom opaque token sessions with PBKDF2 password hashing
 - **CI/CD**: GitHub Actions (build on VPS via deploy.sh)
@@ -68,8 +65,8 @@ Frontend (Angular)          Backend (.NET)
 │  SignalR Client │◀─WS────│  SignalR Hub         │
 │  Auth Interceptor│       │  Auth Middleware      │
 │  Offline Queue  │        │  Rate Limiting       │
-└─────────────────┘        │  EF Core + SQLite    │
-                            └─────────────────────┘
+└─────────────────┘        │  EF Core + Postgres  │
+                           └─────────────────────┘
 ```
 
 ---
@@ -99,63 +96,100 @@ Billard-system/
 
 ## Getting Started
 
-### Prerequisites
+### Requisitos
 
+- [Docker Desktop](https://docs.docker.com/get-docker/) (corriendo)
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 22+](https://nodejs.org/)
-- [Docker](https://docs.docker.com/get-docker/) (for deployment)
+- Copiar `.env.example` → `.env` y configurar `POSTGRES_PASSWORD`, `JWT_KEY`, `SUPER_USERNAME`, `SUPER_PASSWORD`
 
-### Local Development
+La DB (Postgres) siempre vive en Docker. Hay **2 flujos** para correr la app:
+
+---
+
+### Flujo A — Todo en Docker (como producción)
 
 ```bash
-# Clone
-git clone git@github.com:santidev21/Billard-system.git
-cd Billard-system
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
 
-# Backend
+- **App:** http://localhost:5000
+- **Health:** http://localhost:5000/api/health
+- **DB:** 127.0.0.1:5433 (solo loopback)
+- **Datos:** persisten en el volumen `billard-pg` al apagar; solo se borran con `down -v`
+
+```bash
+# Detener
+docker compose -f docker-compose.yml -f docker-compose.local.yml down
+
+# Borrar DB y empezar de cero (volumen eliminado)
+docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
+
+---
+
+### Flujo B — Desarrollo local (DB en Docker, hot reload)
+
+```bash
+# 1) Levantar solo la DB
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
+
+# 2) Backend (terminal 1)
 cd backend/src/BilliardSystem.API
 dotnet run
-# API runs on http://localhost:5000
+# → http://localhost:5000
 
-# Frontend (new terminal)
+# 3) Frontend (terminal 2)
 cd frontend
-npm install
 npm start
-# App runs on http://localhost:4200
+# → http://localhost:4200 (proxy /api a :5000)
 ```
+
+> **Nota:** Si venís del Flujo A, primero detené el contenedor `billard` (ocupa el 5000):
+> ```bash
+> docker stop billard
+> ```
+
+---
 
 ### Default Login
 
 - URL: `http://localhost:4200/#/login`
 - Password: `admin`
-- You will be prompted to change it on first login (min. 8 characters)
+- Se pide cambiar la clave en el primer ingreso (mín. 8 caracteres)
 
-### Docker Dev (test the current code in Docker)
+---
+
+### Gotchas
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| `dotnet run` → connection refused en 5433 | Se usó `docker compose up` sin los dos `-f` | SIEMPRE usar `docker compose -f docker-compose.yml -f docker-compose.local.yml` |
+| `dotnet run` → puerto 5000 ocupado | El contenedor `billard` (Flujo A) sigue corriendo | `docker stop billard` |
+| El 5433 ya está ocupado | Otro proyecto local (en `C:\Dev`) usa Postgres en 5433 | Detener ese proyecto antes |
+| Password auth failed para postgres | El volumen tiene un password distinto al `.env` | `docker compose ... down -v` + `up -d` (borra datos) |
+
+---
+
+### Migraciones
+
+Billard aplica migraciones automáticamente al arrancar el backend (migrator integrado en `DatabaseInitializer`). No hace falta un paso extra.
 
 ```bash
-# local: local networks + debug ports
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Crear una migración
+cd backend
+dotnet ef migrations add NombreMigracion \
+  --project src/BilliardSystem.Infrastructure \
+  --startup-project src/BilliardSystem.API
 
-# clean state: wipes DB volume and re-seeds Demo/M1 (requires .env)
-docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
-
-# verify
-docker compose -f docker-compose.yml -f docker-compose.local.yml ps
-docker logs -f billard
-docker exec billard-db-1 psql -U postgres -d billard -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
-# app at http://127.0.0.1:5000 (health: http://localhost:5000/api/health)
+# Se aplica sola al próximo `dotnet run` o al reiniciar el contenedor
 ```
 
-#### Troubleshooting
-
+Verificar migraciones aplicadas:
 ```bash
-# "The container name /billard is already in use" -> remove the stale container, then retry up
-docker rm -f billard
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
-
-# localhost:5000 refuses connection -> you probably ran without the local override;
-# the base file publishes no ports. Always include both -f flags (see above).
+docker exec -e PGPASSWORD=postgres billard-db-1 psql -U postgres -d billiard \
+  -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
 ```
 
 ---

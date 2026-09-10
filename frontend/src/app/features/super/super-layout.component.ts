@@ -106,9 +106,4 @@ export class SuperLayoutComponent implements OnInit {
     this.revealedCode.set(null);
     this.revealedId.set(null);
   }
-
-  async logout(): Promise<void> {
-    await this.auth.logout();
-    await this.router.navigate(['/login']);
-  }
 }

@@ -1,17 +1,4 @@
 <div class="admin-layout">
-  <div class="admin-head">
-    <div class="admin-head-left">
-      <h2>Panel de Administración</h2>
-      @if (tenantName(); as name) {
-        <span class="tenant-badge">{{ name }}</span>
-      }
-    </div>
-    <div class="admin-head-actions">
-      <button class="btn btn-outline" (click)="openChangePassword()">Cambiar clave</button>
-      <button class="btn btn-outline" (click)="logout()">Cerrar sesión</button>
-    </div>
-  </div>
-
   <nav class="admin-nav">
     <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
     <a routerLink="/admin/catalog" routerLinkActive="active">Catálogo</a>
@@ -33,32 +20,6 @@
       <div class="popup-actions">
         <button class="btn btn-primary" (click)="attendFromPopup(n)">Atender ahora</button>
         <button class="btn btn-outline" (click)="closePopup()">Cerrar</button>
-      </div>
-    </div>
-  </div>
-}
-
-@if (showChangePassword()) {
-  <div class="overlay">
-    <div class="card glass">
-      <header>
-        <h3>Actualizar clave de acceso</h3>
-        <button class="btn btn-outline close" (click)="closeChangePassword()">✕</button>
-      </header>
-      <label>Clave actual</label>
-      <input [(ngModel)]="currentPassword" type="password" placeholder="Clave actual" autocomplete="current-password" />
-      <label>Nueva clave</label>
-      <input [(ngModel)]="newPassword" type="password" placeholder="Nueva clave (mín. 8 caracteres)" autocomplete="new-password" />
-      <label>Confirmar nueva clave</label>
-      <input [(ngModel)]="confirmPassword" type="password" placeholder="Repite la nueva clave" autocomplete="new-password" />
-      @if (passwordError(); as e) {
-        <div class="error">{{ e }}</div>
-      }
-      <div class="actions">
-        <button class="btn btn-primary" [disabled]="saving() || !currentPassword || !newPassword || !confirmPassword" (click)="savePassword()">
-          {{ saving() ? 'Guardando…' : 'Guardar' }}
-        </button>
-        <button class="btn btn-outline" (click)="closeChangePassword()">Cancelar</button>
       </div>
     </div>
   </div>

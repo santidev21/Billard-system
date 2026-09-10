@@ -1,6 +1,4 @@
 .super-layout { display: flex; flex-direction: column; gap: 1rem; flex: 1; min-height: 0; }
-.super-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.super-head h2 { margin: 0; font-size: 1.5rem; }
 .super-tabs { display: flex; gap: 0.4rem; }
 .tab {
   color: var(--text-muted);

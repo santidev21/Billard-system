@@ -3,11 +3,6 @@
     <div class="player-loading"><app-spinner [label]="'Conectando a la mesa…'" /></div>
   }
 
-  <header class="panel-head">
-    <div class="table-badge">MESA: {{ tableNumber() }}</div>
-    <h2>{{ tableName() }}</h2>
-  </header>
-
   @if (!running()) {
     @if (gameMode() === 'Managed') {
       <div class="start-box">
@@ -32,15 +27,17 @@
       </div>
 
       <div class="center-col">
-        <app-camera-view />
-        <div class="virtual-table">
-          <div class="table-felt">
-            <div class="felt-line"></div>
-            <div class="player-ball y-ball pos-y"></div>
-            <div class="player-ball r-ball pos-r"></div>
-            <div class="player-ball w-ball pos-w"></div>
-            <div class="t-head">Tres Bandas</div>
-            <div class="t-carambolas">Carambolas: {{ totalCarambolas() }}</div>
+        <div class="stage" [class.camera-live]="cam.cameraOn()">
+          <app-camera-view [fill]="true" />
+          <div class="virtual-table">
+            <div class="table-felt">
+              <div class="felt-line"></div>
+              <div class="player-ball y-ball pos-y"></div>
+              <div class="player-ball r-ball pos-r"></div>
+              <div class="player-ball w-ball pos-w"></div>
+              <div class="t-head">Tres Bandas</div>
+              <div class="t-carambolas">Carambolas: {{ totalCarambolas() }}</div>
+            </div>
           </div>
         </div>
         @if (gameMode() !== 'FreeMode') {
@@ -126,8 +123,6 @@
       <div class="round-toast blocked">{{ msg }}</div>
     }
   }
-
-  <footer class="brand">VirtualScore</footer>
 </section>
 
 @if (showConsumptionLog()) {
