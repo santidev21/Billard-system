@@ -1,0 +1,23 @@
+{
+  "name": "billard-root",
+  "private": true,
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "node ./scripts/run-billard.mjs all",
+    "dev:ui": "node ./scripts/run-billard.mjs ui",
+    "dev:api": "node ./scripts/run-billard.mjs api",
+    "setup": "npm --prefix frontend install",
+    "db:up": "docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db",
+    "db:down": "docker compose -f docker-compose.yml -f docker-compose.local.yml stop db",
+    "db:migrate": "node ./scripts/run-billard.mjs migrate",
+    "db:migration:add": "dotnet ef migrations add --project backend/src/BilliardSystem.Infrastructure/BilliardSystem.Infrastructure.csproj --startup-project backend/src/BilliardSystem.API/BilliardSystem.API.csproj",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build",
+    "docker:down": "docker compose -f docker-compose.yml -f docker-compose.local.yml down",
+    "build": "npm run build:ui && npm run build:api",
+    "build:ui": "npm --prefix frontend run build",
+    "build:api": "dotnet build backend/BilliardSystem.slnx -c Release",
+    "test": "npm run test:ui && npm run test:api",
+    "test:ui": "npm --prefix frontend run test",
+    "test:api": "dotnet test backend/BilliardSystem.slnx -c Release"
+  }
+}

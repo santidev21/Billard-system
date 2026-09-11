@@ -11,6 +11,8 @@ services:
       - "127.0.0.1:5433:5432"
 
   billard:
+    environment:
+      - AllowedHosts=billard.santidev21.tech;localhost;127.0.0.1
     ports:
       - "127.0.0.1:5000:5000"
 

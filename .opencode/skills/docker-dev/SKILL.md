@@ -5,14 +5,16 @@ description: Run Billard-system locally with Docker Compose. Use when starting s
 
 # Local Docker
 
-ALWAYS pass both `-f` flags (without them the DB connection breaks — see README Gotchas). Run from the repo root:
+Prefer the root scripts (`npm run docker:dev`, `npm run db:up`, `npm run dev`). Raw compose ALWAYS passes both `-f` flags (without them the DB connection breaks — see README Gotchas). Run from the repo root:
 
 ```bash
-# Full local stack (Flujo A, like production)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Full local stack (like production)
+npm run docker:dev
+# = docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
-# DB only (Flujo B: manual dotnet run + ng serve)
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
+# DB only (native dev: npm run dev / dev:api + dev:ui)
+npm run db:up
+# = docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
 
 # Tear down (data persists in billard-pg volume)
 docker compose -f docker-compose.yml -f docker-compose.local.yml down
@@ -28,6 +30,6 @@ Local ports:
 Single `billard` image serves frontend + backend; Postgres is internal-only.
 
 Rules:
-- Manual (no-Docker app) dev: backend `http://localhost:5000` (`dotnet run` from `backend/src/BilliardSystem.API`), frontend `http://localhost:4200` (`npm start` from `frontend/`).
-- Stop the `billard` container before manual `dotnet run`: `docker stop billard` (port 5000 conflict).
+- Native (no-Docker app) dev: `npm run dev` (DB in Docker + `dotnet run` backend `:5000` + `ng serve` frontend `:4200`); single side via `dev:api` / `dev:ui`.
+- Stop the `billard` container before native `dotnet run`: `docker stop billard` (port 5000 conflict).
 - Never bake secrets into images — `.env` is excluded via `.dockerignore`.

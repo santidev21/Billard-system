@@ -98,7 +98,12 @@ Billard-system/
 
 ---
 
-## Getting Started
+## Local Development
+
+La DB (Postgres) **siempre vive en Docker** — loopback-only (`127.0.0.1:5433`), nunca expuesta al exterior. Solo cambia dónde corre la app:
+
+- `npm run docker:dev` → todo (DB + app) en Docker, como producción.
+- `npm run dev` → DB en Docker, backend + frontend nativos (`dotnet run` / `npm start`) con hot reload, contra el **mismo** volumen `billard-pg`.
 
 ### Requisitos
 
@@ -107,24 +112,28 @@ Billard-system/
 - [Node.js 22+](https://nodejs.org/)
 - Copiar `.env.example` → `.env` y configurar `POSTGRES_PASSWORD`, `JWT_KEY`, `SUPER_USERNAME`, `SUPER_PASSWORD`
 
-La DB (Postgres) siempre vive en Docker. Hay **2 flujos** para correr la app:
+Frontend (solo primera vez):
+```bash
+npm run setup   # npm install en frontend/
+```
 
 ---
 
-### Flujo A — Todo en Docker (como producción)
+### Todo en Docker (como producción)
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+npm run docker:dev
+# = docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 ```
 
-- **App:** http://localhost:5000
+- **App:** http://localhost:5000 (`http://127.0.0.1:5000` also works locally)
 - **Health:** http://localhost:5000/api/health
 - **DB:** 127.0.0.1:5433 (solo loopback)
 - **Datos:** persisten en el volumen `billard-pg` al apagar; solo se borran con `down -v`
 
 ```bash
 # Detener
-docker compose -f docker-compose.yml -f docker-compose.local.yml down
+npm run docker:down
 
 # Borrar DB y empezar de cero (volumen eliminado)
 docker compose -f docker-compose.yml -f docker-compose.local.yml down -v
@@ -133,27 +142,61 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 ---
 
-### Flujo B — Desarrollo local (DB en Docker, hot reload)
+### Desarrollo nativo (hot reload)
 
 ```bash
-# 1) Levantar solo la DB
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d db
-
-# 2) Backend (terminal 1)
-cd backend/src/BilliardSystem.API
-dotnet run
-# → http://localhost:5000
-
-# 3) Frontend (terminal 2)
-cd frontend
-npm start
-# → http://localhost:4200 (proxy /api a :5000)
+npm run dev
 ```
 
-> **Nota:** Si venís del Flujo A, primero detené el contenedor `billard` (ocupa el 5000):
+Levanta la DB en Docker y corre el backend (`http://localhost:5000`, migraciones EF aplicadas automáticamente al arrancar) y el frontend (`http://localhost:4200`, proxy `/api` y `/hubs` → :5000).
+
+Un solo lado:
+```bash
+npm run dev:api   # backend solo (:5000)
+npm run dev:ui    # frontend solo (:4200)
+```
+
+> **Nota:** si venís del flujo Docker, primero detené el contenedor `billard` (ocupa el 5000):
 > ```bash
 > docker stop billard
 > ```
+
+---
+
+### Base de datos y migraciones
+
+```bash
+npm run db:up       # solo la DB (127.0.0.1:5433, loopback-only)
+npm run db:down     # detenerla (los datos persisten en billard-pg)
+npm run db:migrate  # la DB ya está arriba; Billard aplica migraciones solo al arrancar el backend
+```
+
+Billard aplica migraciones automáticamente al arrancar el backend (migrator integrado en `DatabaseInitializer`). No hace falta un paso extra.
+
+```bash
+# Crear una migración
+npm run db:migration:add -- NombreMigracion
+# Se aplica sola al próximo `npm run dev:api` / `npm run dev` o al reiniciar el contenedor
+```
+
+Verificar migraciones aplicadas:
+```bash
+docker exec -e PGPASSWORD=postgres billard-db-1 psql -U postgres -d billiard \
+  -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
+```
+
+---
+
+### Comandos
+
+| Comando | Propósito |
+|---|---|
+| `npm run dev` | DB (Docker) + backend + frontend con hot reload |
+| `npm run dev:ui` / `npm run dev:api` | Frontend / backend solo |
+| `npm run db:up` / `npm run db:down` | Arrancar / detener Postgres en Docker |
+| `npm run db:migrate` | Verifica DB (las migraciones se auto-aplican) |
+| `npm run docker:dev` / `npm run docker:down` | Stack completo en Docker / detenerlo |
+| `npm run build` / `npm run test` | Build / test frontend + backend |
 
 ---
 
@@ -169,32 +212,9 @@ npm start
 
 | Problema | Causa | Solución |
 |----------|-------|----------|
-| `dotnet run` → connection refused en 5433 | Se usó `docker compose up` sin los dos `-f` | SIEMPRE usar `docker compose -f docker-compose.yml -f docker-compose.local.yml` |
-| `dotnet run` → puerto 5000 ocupado | El contenedor `billard` (Flujo A) sigue corriendo | `docker stop billard` |
-| El 5433 ya está ocupado | Otro proyecto local (en `C:\Dev`) usa Postgres en 5433 | Detener ese proyecto antes |
-| Password auth failed para postgres | El volumen tiene un password distinto al `.env` | `docker compose ... down -v` + `up -d` (borra datos) |
-
----
-
-### Migraciones
-
-Billard aplica migraciones automáticamente al arrancar el backend (migrator integrado en `DatabaseInitializer`). No hace falta un paso extra.
-
-```bash
-# Crear una migración
-cd backend
-dotnet ef migrations add NombreMigracion \
-  --project src/BilliardSystem.Infrastructure \
-  --startup-project src/BilliardSystem.API
-
-# Se aplica sola al próximo `dotnet run` o al reiniciar el contenedor
-```
-
-Verificar migraciones aplicadas:
-```bash
-docker exec -e PGPASSWORD=postgres billard-db-1 psql -U postgres -d billiard \
-  -c "SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY 1;"
-```
+| `dotnet run` → connection refused en 5433 | La DB no está levantada | `npm run db:up` (o `npm run dev`, que la levanta sola) |
+| `dotnet run` → puerto 5000 ocupado | El contenedor `billard` (flujo Docker) sigue corriendo | `docker stop billard` |
+| Password auth failed para postgres | El volumen tiene un password distinto al `.env` | `docker compose -f docker-compose.yml -f docker-compose.local.yml down -v` + `up -d` (borra datos) |
 
 ---
 
