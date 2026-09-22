@@ -24,3 +24,4 @@ networks:
   billard-internal-net:
     name: billard-internal-net
     driver: bridge
+    internal: false
