@@ -57,6 +57,7 @@ Angular 22 SPA in `frontend/src/app` (`core/` auth/API/SignalR/models, `features
 - `AGENTS.md` is the single source of truth; `docs/specs/` holds details.
 
 ## Working Rules For This Repo
+- Language: all code, comments, XML docs, tests, commit messages, PR titles/descriptions, docs (`README`, `docs/`, `AGENTS.md`), and AI output must be in English. Only user-facing UI strings may be in Spanish (via i18n files), never hardcoded Spanish in code/comments.
 - Prefer small, focused changes.
 - Keep API contracts, frontend types, and tests aligned in the same pass.
 - EF migrations live in `BilliardSystem.Infrastructure`; never edit applied migrations, add a new one (auto-applied at startup via `DatabaseInitializer`; `npm run db:migration:add -- <Name>`).
