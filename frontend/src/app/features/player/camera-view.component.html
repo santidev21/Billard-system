@@ -1,19 +1,36 @@
 @if (fill) {
   <div class="cam-fill">
-    <video #liveVideo autoplay muted playsinline class="live" [class.hidden]="!cam.cameraOn()" aria-label="Vista en vivo de la mesa"></video>
+    <video
+      #liveVideo
+      autoplay
+      muted
+      playsinline
+      class="live"
+      [class.hidden]="!cam.cameraOn()"
+      aria-label="Vista en vivo de la mesa"
+    ></video>
     <div class="live-indicator on" [class.hidden]="!cam.cameraOn()">
       <span class="dot"></span> EN VIVO
     </div>
 
     @if (cam.devices().length > 1) {
-      <select class="overlay-device" [class.hidden]="!cam.cameraOn()" aria-label="Seleccionar cámara" (change)="onDeviceChange($any($event.target).value)">
+      <select
+        class="overlay-device"
+        [class.hidden]="!cam.cameraOn()"
+        aria-label="Seleccionar cámara"
+        (change)="onDeviceChange($any($event.target).value)"
+      >
         @for (d of cam.devices(); track d.deviceId) {
-          <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">{{ d.label || 'Cámara' }}</option>
+          <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">
+            {{ d.label || 'Cámara' }}
+          </option>
         }
       </select>
     }
 
-    <button class="overlay-btn replay-btn" [class.hidden]="!cam.cameraOn()" (click)="openReplay()">Ver Repetición</button>
+    <button class="overlay-btn replay-btn" [class.hidden]="!cam.cameraOn()" (click)="openReplay()">
+      Ver Repetición
+    </button>
   </div>
 
   @if (cam.error()) {
@@ -26,10 +43,15 @@
     <div class="cam glass">
       @if (cam.cameraOn()) {
         <div class="feed-wrap">
-          <video #liveVideo autoplay muted playsinline class="live" aria-label="Vista en vivo de la mesa"></video>
-          <div class="live-indicator on">
-            <span class="dot"></span> EN VIVO
-          </div>
+          <video
+            #liveVideo
+            autoplay
+            muted
+            playsinline
+            class="live"
+            aria-label="Vista en vivo de la mesa"
+          ></video>
+          <div class="live-indicator on"><span class="dot"></span> EN VIVO</div>
         </div>
       } @else {
         <div class="cam-placeholder">
@@ -40,13 +62,24 @@
 
       <div class="controls">
         @if (cam.devices().length > 1) {
-          <select class="device-select" aria-label="Seleccionar cámara" (change)="onDeviceChange($any($event.target).value)">
+          <select
+            class="device-select"
+            aria-label="Seleccionar cámara"
+            (change)="onDeviceChange($any($event.target).value)"
+          >
             @for (d of cam.devices(); track d.deviceId) {
-              <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">{{ d.label || 'Cámara' }}</option>
+              <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">
+                {{ d.label || 'Cámara' }}
+              </option>
             }
           </select>
         }
-        <button class="btn" [class.btn-primary]="!cam.cameraOn()" [class.btn-danger]="cam.cameraOn()" (click)="onToggle()">
+        <button
+          class="btn"
+          [class.btn-primary]="!cam.cameraOn()"
+          [class.btn-danger]="cam.cameraOn()"
+          (click)="onToggle()"
+        >
           {{ cam.cameraOn() ? 'Apagar Cámara' : 'Encender Cámara' }}
         </button>
       </div>
@@ -56,7 +89,13 @@
       }
 
       <div class="controls">
-        <button class="btn btn-outline replay-btn" [disabled]="!cam.cameraOn()" (click)="openReplay()">Ver Repetición</button>
+        <button
+          class="btn btn-outline replay-btn"
+          [disabled]="!cam.cameraOn()"
+          (click)="openReplay()"
+        >
+          Ver Repetición
+        </button>
       </div>
     </div>
 

@@ -22,7 +22,11 @@
           <button (click)="addScore('white', +5)">+5</button>
         </div>
         <div class="player-name">
-          <input aria-label="Nombre del jugador 1" [value]="whiteName()" (change)="renamePlayer('white', $any($event.target).value)" />
+          <input
+            aria-label="Nombre del jugador 1"
+            [value]="whiteName()"
+            (change)="renamePlayer('white', $any($event.target).value)"
+          />
         </div>
       </div>
 
@@ -84,7 +88,9 @@
       <div class="side player-yellow">
         <div class="badge">JUGADOR 2</div>
         <div class="ball yellow"></div>
-        <button class="score-btn yellow" (click)="addScore('yellow', 1)">{{ yellowScore() }}</button>
+        <button class="score-btn yellow" (click)="addScore('yellow', 1)">
+          {{ yellowScore() }}
+        </button>
         <div class="score-btns">
           <button (click)="addScore('yellow', +5)">+5</button>
           <button (click)="addScore('yellow', +3)">+3</button>
@@ -92,17 +98,29 @@
           <button class="neg" (click)="addScore('yellow', -1)">−1</button>
         </div>
         <div class="player-name">
-          <input aria-label="Nombre del jugador 2" [value]="yellowName()" (change)="renameName($event, 'yellow')" />
+          <input
+            aria-label="Nombre del jugador 2"
+            [value]="yellowName()"
+            (change)="renameName($event, 'yellow')"
+          />
         </div>
       </div>
     </div>
 
     <div class="toolbar glass">
       @if (gameMode() !== 'FreeMode') {
-        <button class="btn btn-outline" [class.sent]="requestSent() === 'waiter'" (click)="callWaiter()">
+        <button
+          class="btn btn-outline"
+          [class.sent]="requestSent() === 'waiter'"
+          (click)="callWaiter()"
+        >
           {{ requestSent() === 'waiter' ? '✓ Llamado' : 'Llamar Mesero' }}
         </button>
-        <button class="btn btn-danger long" [class.sent]="requestSent() === 'check'" (click)="requestCheck()">
+        <button
+          class="btn btn-danger long"
+          [class.sent]="requestSent() === 'check'"
+          (click)="requestCheck()"
+        >
           {{ requestSent() === 'check' ? '✓ Cuenta solicitada' : 'Pedir Cuenta' }}
         </button>
         <button class="btn btn-outline" (click)="showConsumptionLog.set(true)">Ver Consumo</button>
@@ -126,15 +144,30 @@
 </section>
 
 @if (showConsumptionLog()) {
-  <div class="consumption-log overlay" (keydown.escape)="showConsumptionLog.set(false)">
+  <div
+    class="consumption-log overlay"
+    role="presentation"
+    (keydown.escape)="showConsumptionLog.set(false)"
+  >
     <div class="card" role="dialog" aria-modal="true" aria-labelledby="consumption-log-title">
       <header>
         <h3 id="consumption-log-title">Consumo de Mesa ({{ consumptions().length }})</h3>
-        <button class="btn btn-outline close" (click)="showConsumptionLog.set(false)" aria-label="Cerrar">✕</button>
+        <button
+          class="btn btn-outline close"
+          (click)="showConsumptionLog.set(false)"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
       </header>
       <table>
         <thead>
-          <tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Total</th></tr>
+          <tr>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Total</th>
+          </tr>
         </thead>
         <tbody>
           @for (c of consumptions(); track c.id) {
@@ -152,7 +185,7 @@
 }
 
 @if (showRounds()) {
-  <div class="rounds-overlay overlay" (keydown.escape)="closeRounds()">
+  <div class="rounds-overlay overlay" role="presentation" (keydown.escape)="closeRounds()">
     <div class="card" role="dialog" aria-modal="true" aria-labelledby="rounds-history-title">
       <header>
         <h3 id="rounds-history-title">Historial de Rondas</h3>
@@ -160,12 +193,24 @@
       </header>
       @if (rounds(); as rh) {
         <div class="rounds-score">
-          <div class="rk bw"><span class="rk-lbl">{{ whiteName() }} (Blanco)</span><span class="rk-val">{{ rh.whiteRounds }}</span></div>
-          <div class="rk by"><span class="rk-lbl">{{ yellowName() }} (Amarillo)</span><span class="rk-val">{{ rh.yellowRounds }}</span></div>
+          <div class="rk bw">
+            <span class="rk-lbl">{{ whiteName() }} (Blanco)</span
+            ><span class="rk-val">{{ rh.whiteRounds }}</span>
+          </div>
+          <div class="rk by">
+            <span class="rk-lbl">{{ yellowName() }} (Amarillo)</span
+            ><span class="rk-val">{{ rh.yellowRounds }}</span>
+          </div>
         </div>
         <table>
           <thead>
-            <tr><th>Ronda</th><th>Blanco</th><th>Amarillo</th><th>Duración</th><th>Resultado</th></tr>
+            <tr>
+              <th>Ronda</th>
+              <th>Blanco</th>
+              <th>Amarillo</th>
+              <th>Duración</th>
+              <th>Resultado</th>
+            </tr>
           </thead>
           <tbody>
             @for (r of rh.rounds; track r.roundNumber) {
@@ -174,16 +219,20 @@
                 <td>{{ r.whiteScore }}</td>
                 <td>{{ r.yellowScore }}</td>
                 <td>{{ formatDuration(r.durationSeconds) }}</td>
-                <td>{{ r.winnerName ? (r.winnerName + ' gana') : 'Empate' }}</td>
+                <td>{{ r.winnerName ? r.winnerName + ' gana' : 'Empate' }}</td>
               </tr>
             }
           </tbody>
         </table>
         @if (rh.rounds.length > 0) {
           <p class="rk-leader">
-            @if (rh.whiteRounds > rh.yellowRounds) { Ganando {{ whiteName() }} · {{ rh.whiteRounds }} a {{ rh.yellowRounds }} }
-            @else if (rh.yellowRounds > rh.whiteRounds) { Ganando {{ yellowName() }} · {{ rh.yellowRounds }} a {{ rh.whiteRounds }} }
-            @else { Empate en rondas ({{ rh.whiteRounds }}-{{ rh.yellowRounds }}) }
+            @if (rh.whiteRounds > rh.yellowRounds) {
+              Ganando {{ whiteName() }} · {{ rh.whiteRounds }} a {{ rh.yellowRounds }}
+            } @else if (rh.yellowRounds > rh.whiteRounds) {
+              Ganando {{ yellowName() }} · {{ rh.yellowRounds }} a {{ rh.whiteRounds }}
+            } @else {
+              Empate en rondas ({{ rh.whiteRounds }}-{{ rh.yellowRounds }})
+            }
           </p>
         }
       } @else {
@@ -200,22 +249,38 @@
         <h3 id="game-ended-title">Partida terminada</h3>
         @if (endedSummary(); as s) {
           <div class="ended-summary">
-            <div class="es-row"><span>{{ s.whiteName ?? whiteName() }} (Blanco)</span><b>{{ s.whiteScore ?? whiteScore() }}</b></div>
-            <div class="es-row"><span>{{ s.yellowName ?? yellowName() }} (Amarillo)</span><b>{{ s.yellowScore ?? yellowScore() }}</b></div>
-            <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
+            <div class="es-row">
+              <span>{{ s.whiteName ?? whiteName() }} (Blanco)</span
+              ><b>{{ s.whiteScore ?? whiteScore() }}</b>
+            </div>
+            <div class="es-row">
+              <span>{{ s.yellowName ?? yellowName() }} (Amarillo)</span
+              ><b>{{ s.yellowScore ?? yellowScore() }}</b>
+            </div>
+            <div class="es-row">
+              <span>Tiempo jugado</span><b>{{ s.time }}</b>
+            </div>
           </div>
         }
         <div class="confirm-actions">
-          <button class="btn btn-primary" (click)="startNewFreeGame()">Iniciar nueva partida</button>
+          <button class="btn btn-primary" (click)="startNewFreeGame()">
+            Iniciar nueva partida
+          </button>
         </div>
       } @else {
         <h3 id="game-ended-title">La partida ha finalizado</h3>
         <p class="msg">El juego terminó. Contacta con un mesero para iniciar uno nuevo.</p>
         @if (endedSummary(); as s) {
           <div class="ended-summary">
-            <div class="es-row"><span>Tiempo jugado</span><b>{{ s.time }}</b></div>
-            <div class="es-row"><span>Total consumo</span><b>${{ fmt(s.consumptionTotal) }}</b></div>
-            <div class="es-row grand"><span>Total</span><b>${{ fmt(s.grandTotal) }}</b></div>
+            <div class="es-row">
+              <span>Tiempo jugado</span><b>{{ s.time }}</b>
+            </div>
+            <div class="es-row">
+              <span>Total consumo</span><b>${{ fmt(s.consumptionTotal) }}</b>
+            </div>
+            <div class="es-row grand">
+              <span>Total</span><b>${{ fmt(s.grandTotal) }}</b>
+            </div>
           </div>
         }
         <div class="confirm-actions">
@@ -227,10 +292,12 @@
 }
 
 @if (showConfirm()) {
-  <div class="confirm overlay" (keydown.escape)="onConfirmCancelled()">
+  <div class="confirm overlay" role="presentation" (keydown.escape)="onConfirmCancelled()">
     <div class="card" role="dialog" aria-modal="true" aria-labelledby="confirm-close-title">
       <h3 id="confirm-close-title">¿Confirmar cierre de partida?</h3>
-      <p class="msg">Se guardará el historial y la mesa quedará libre (total ${{ grandTotalText() }}).</p>
+      <p class="msg">
+        Se guardará el historial y la mesa quedará libre (total ${{ grandTotalText() }}).
+      </p>
       <div class="confirm-actions">
         <button class="btn btn-danger" (click)="finishConfirmed()">Sí, terminar</button>
         <button class="btn btn-outline" (click)="onConfirmCancelled()">No</button>

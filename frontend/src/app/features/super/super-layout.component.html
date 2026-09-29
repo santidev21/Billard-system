@@ -1,7 +1,23 @@
 <div class="super-layout">
   <div class="super-tabs" role="tablist" aria-label="Secciones de super administración">
-    <button class="tab" role="tab" [class.active]="activeTab() === 'locales'" [attr.aria-selected]="activeTab() === 'locales'" (click)="switchTab('locales')">Locales</button>
-    <button class="tab" role="tab" [class.active]="activeTab() === 'recoveries'" [attr.aria-selected]="activeTab() === 'recoveries'" (click)="switchTab('recoveries')">Recuperaciones</button>
+    <button
+      class="tab"
+      role="tab"
+      [class.active]="activeTab() === 'locales'"
+      [attr.aria-selected]="activeTab() === 'locales'"
+      (click)="switchTab('locales')"
+    >
+      Locales
+    </button>
+    <button
+      class="tab"
+      role="tab"
+      [class.active]="activeTab() === 'recoveries'"
+      [attr.aria-selected]="activeTab() === 'recoveries'"
+      (click)="switchTab('recoveries')"
+    >
+      Recuperaciones
+    </button>
   </div>
 
   @if (loading()) {
@@ -12,21 +28,40 @@
 
   @if (activeTab() === 'locales') {
     <div class="create-form glass" role="tabpanel">
-      <input [(ngModel)]="newLocalName" placeholder="Nombre del local" aria-label="Nombre del local" />
-      <input [(ngModel)]="newLocalPassword" placeholder="Clave inicial (opcional)" type="password" aria-label="Clave inicial del local (opcional)" />
-      <button class="btn btn-primary" [disabled]="!newLocalName.trim()" (click)="createLocal()">Crear local</button>
+      <input
+        [(ngModel)]="newLocalName"
+        placeholder="Nombre del local"
+        aria-label="Nombre del local"
+      />
+      <input
+        [(ngModel)]="newLocalPassword"
+        placeholder="Clave inicial (opcional)"
+        type="password"
+        aria-label="Clave inicial del local (opcional)"
+      />
+      <button class="btn btn-primary" [disabled]="!newLocalName.trim()" (click)="createLocal()">
+        Crear local
+      </button>
     </div>
 
     @if (createdLocal(); as c) {
       <div class="created-banner glass">
         <div class="banner-header">
           <strong>Local creado</strong>
-          <button class="btn btn-outline mini" (click)="dismissCreated()" aria-label="Cerrar">✕</button>
+          <button class="btn btn-outline mini" (click)="dismissCreated()" aria-label="Cerrar">
+            ✕
+          </button>
         </div>
         <p>Credenciales para que el local ingrese:</p>
-        <div class="credential-row"><span>Nombre del local:</span><code>{{ c.name }}</code></div>
-        <div class="credential-row"><span>Usuario:</span><code>{{ c.slug }}</code></div>
-        <div class="credential-row"><span>Clave:</span><code>{{ c.password }}</code></div>
+        <div class="credential-row">
+          <span>Nombre del local:</span><code>{{ c.name }}</code>
+        </div>
+        <div class="credential-row">
+          <span>Usuario:</span><code>{{ c.slug }}</code>
+        </div>
+        <div class="credential-row">
+          <span>Clave:</span><code>{{ c.password }}</code>
+        </div>
         <p class="banner-hint">Puedes usar el nombre del local O el usuario para iniciar sesión.</p>
       </div>
     }
@@ -37,7 +72,9 @@
           <div class="card-top">
             <span class="name">{{ local.name }}</span>
             <span class="slug">{{ local.slug }}</span>
-            <span class="status" [class.active]="local.isActive">{{ local.isActive ? 'Activo' : 'Inactivo' }}</span>
+            <span class="status" [class.active]="local.isActive">{{
+              local.isActive ? 'Activo' : 'Inactivo'
+            }}</span>
           </div>
           <div class="card-stats">
             <span>{{ local.tableCount }} mesas</span>
@@ -61,13 +98,19 @@
             <span class="tenant">{{ r.tenantName }}</span>
           </div>
           <div class="card-dates">
-            <span>Creado: {{ r.createdAt | date:'short' }}</span>
-            <span>Expira: {{ r.expiresAt | date:'short' }}</span>
+            <span>Creado: {{ r.createdAt | date: 'short' }}</span>
+            <span>Expira: {{ r.expiresAt | date: 'short' }}</span>
           </div>
           @if (revealedId() === r.id && revealedCode(); as code) {
             <div class="revealed-code">{{ code }}</div>
           } @else {
-            <button class="btn btn-outline" (click)="revealCode(r.id)" [attr.aria-label]="'Mostrar código de recuperación de ' + r.userName">Mostrar</button>
+            <button
+              class="btn btn-outline"
+              (click)="revealCode(r.id)"
+              [attr.aria-label]="'Mostrar código de recuperación de ' + r.userName"
+            >
+              Mostrar
+            </button>
           }
         </div>
       } @empty {

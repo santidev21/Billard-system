@@ -45,7 +45,10 @@ export class CameraService {
       }
 
       this.available.set(true);
-      if (!this.selectedDeviceId() || !videoDevices.find((d) => d.deviceId === this.selectedDeviceId())) {
+      if (
+        !this.selectedDeviceId() ||
+        !videoDevices.find((d) => d.deviceId === this.selectedDeviceId())
+      ) {
         this.selectedDeviceId.set(videoDevices[0].deviceId);
       }
     } catch {

@@ -17,10 +17,27 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet restore
         working-directory: backend
+      - name: Verify formatting
+        run: dotnet format whitespace BilliardSystem.slnx --verify-no-changes --no-restore
+        working-directory: backend
       - run: dotnet build --no-restore -c Release
         working-directory: backend
-      - run: dotnet test --no-build -c Release --verbosity normal
+      - name: Run backend tests with coverage
+        run: >
+          dotnet test --no-build -c Release
+          --collect:"XPlat Code Coverage"
+          --settings ../coverlet.runsettings
+          --logger "trx;LogFileName=results.trx"
         working-directory: backend
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            backend/**/TestResults/*.trx
+            backend/**/coverage.cobertura.xml
+          retention-days: 7
 
   frontend:
     runs-on: ubuntu-latest
@@ -33,8 +50,54 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
-      - run: npm run build -- --configuration production
+      - name: Lint (ESLint)
+        run: npm run lint
         working-directory: frontend
+      - name: Verify formatting (Prettier)
+        run: npm run format:check
+        working-directory: frontend
+      - name: Run frontend tests with coverage
+        run: npm run test:ci
+        working-directory: frontend
+      - name: Build (production)
+        run: npm run build -- --configuration production
+        working-directory: frontend
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 7
+
+  secret-scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy fs scan (deps, secrets, IaC)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
 
   deploy:
     runs-on: ubuntu-latest

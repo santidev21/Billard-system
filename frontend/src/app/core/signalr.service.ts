@@ -47,7 +47,11 @@ export class SignalRService {
   readonly connected = signal(false);
 
   readonly playerScored = signal<PlayerScoredEvent | null>(null);
-  readonly playerNamesChanged = signal<{ tableId: string; whitePlayerName: string; yellowPlayerName: string } | null>(null);
+  readonly playerNamesChanged = signal<{
+    tableId: string;
+    whitePlayerName: string;
+    yellowPlayerName: string;
+  } | null>(null);
   readonly consumptionAdded = signal<ConsumptionAddedEvent | null>(null);
   readonly sessionStarted = signal<{ tableId: string; matchId: string } | null>(null);
   readonly sessionEnded = signal<SessionEndedEvent | null>(null);
@@ -81,12 +85,20 @@ export class SignalRService {
 
     this.hub.on('PlayerScored', (payload: PlayerScoredEvent) => this.playerScored.set(payload));
     this.hub.on('PlayerNamesChanged', (payload: any) => this.playerNamesChanged.set(payload));
-    this.hub.on('ConsumptionAdded', (payload: ConsumptionAddedEvent) => this.consumptionAdded.set(payload));
+    this.hub.on('ConsumptionAdded', (payload: ConsumptionAddedEvent) =>
+      this.consumptionAdded.set(payload),
+    );
     this.hub.on('SessionStarted', (payload: any) => this.sessionStarted.set(payload));
     this.hub.on('SessionEnded', (payload: SessionEndedEvent) => this.sessionEnded.set(payload));
-    this.hub.on('TableStateUpdated', (payload: TableStateUpdatedEvent) => this.tableStateUpdated.set(payload));
-    this.hub.on('AdminNotification', (payload: AdminNotification) => this.adminNotification.set(payload));
-    this.hub.on('AdminRequest', (payload: AdminNotification) => this.adminNotification.set(payload));
+    this.hub.on('TableStateUpdated', (payload: TableStateUpdatedEvent) =>
+      this.tableStateUpdated.set(payload),
+    );
+    this.hub.on('AdminNotification', (payload: AdminNotification) =>
+      this.adminNotification.set(payload),
+    );
+    this.hub.on('AdminRequest', (payload: AdminNotification) =>
+      this.adminNotification.set(payload),
+    );
 
     this.hub.onreconnecting(() => this.connected.set(false));
     this.hub.onreconnected(() => {

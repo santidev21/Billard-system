@@ -1,4 +1,14 @@
-import { Component, effect, inject, Input, OnDestroy, OnInit, ViewChild, ElementRef, signal } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  Input,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  signal,
+} from '@angular/core';
 
 import { CameraService } from '../../core/camera.service';
 import { ReplayPlayerComponent } from '../../shared/replay-player.component';

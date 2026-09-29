@@ -1,20 +1,20 @@
 :root {
   --pa-read-color: #10b981;
-  --pa-color: #0F5132;
-  --pa-bright: #22A059;
-  --pa-dark: #0B3D26;
+  --pa-color: #0f5132;
+  --pa-bright: #22a059;
+  --pa-dark: #0b3d26;
   --wood: #8a5a2b;
   --felt: #2f7d4f;
-  --white-ball: #FFFFFF;
-  --yellow-ball: #FACC15;
-  --slate: #16231B;
-  --slate-light: #20312A;
-  --text-primary: #F1F5F9;
-  --text-muted: #9DB4A6;
-  --danger: #EF4444;
+  --white-ball: #ffffff;
+  --yellow-ball: #facc15;
+  --slate: #16231b;
+  --slate-light: #20312a;
+  --text-primary: #f1f5f9;
+  --text-muted: #9db4a6;
+  --danger: #ef4444;
   --radius: 16px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 .spinner-center {
@@ -27,7 +27,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: var(--font);
@@ -70,20 +71,43 @@ button {
   border-radius: 999px;
   font-size: 1rem;
   font-weight: 700;
-  transition: transform 0.1s ease, filter 0.2s ease;
+  transition:
+    transform 0.1s ease,
+    filter 0.2s ease;
   color: var(--text-primary);
 }
-.btn:active { transform: scale(0.96); }
-.btn-primary { background: linear-gradient(180deg, #238c4e, var(--pa-color)); color: #fff; box-shadow: 0 4px 12px rgba(15, 81, 50, 0.35); }
-.btn-primary:hover { filter: brightness(1.12); }
-.btn-outline { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16); color: var(--text-primary); }
-.btn-outline:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.28); }
-.btn-danger { background: linear-gradient(180deg, #ef5350, var(--danger)); color: #fff; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:active {
+  transform: scale(0.96);
+}
+.btn-primary {
+  background: linear-gradient(180deg, #238c4e, var(--pa-color));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 81, 50, 0.35);
+}
+.btn-primary:hover {
+  filter: brightness(1.12);
+}
+.btn-outline {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+}
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.btn-danger {
+  background: linear-gradient(180deg, #ef5350, var(--danger));
+  color: #fff;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* Visible keyboard focus (WCAG 2.4.7) */
 :focus-visible {
-  outline: 2px solid #22A059;
+  outline: 2px solid #22a059;
   outline-offset: 2px;
 }
 

@@ -18,6 +18,11 @@ import { PlayerUiService } from './core/player-ui.service';
   standalone: true,
 })
 export class AppComponent implements OnInit {
+  private readonly signalr = inject(SignalRService);
+  private readonly queue = inject(OfflineQueueService);
+  private readonly sync = inject(OfflineSyncService);
+  private readonly router = inject(Router);
+
   readonly connected = this.signalr.connected;
   readonly pendingCommands = this.queue.pendingCount;
   readonly online = signal(navigator.onLine);
@@ -37,12 +42,7 @@ export class AppComponent implements OnInit {
   readonly passwordError = signal<string | null>(null);
   readonly saving = signal(false);
 
-  constructor(
-    private readonly signalr: SignalRService,
-    private readonly queue: OfflineQueueService,
-    private readonly sync: OfflineSyncService,
-    private readonly router: Router,
-  ) {
+  constructor() {
     const applyArea = (url: string): void => {
       if (url.startsWith('/t/') || url.startsWith('/play')) {
         this.area.set('player');
@@ -59,7 +59,11 @@ export class AppComponent implements OnInit {
       }
     };
     // initial sync (covers direct loads / refresh on /t/.../free)
-    try { applyArea(window.location.pathname); } catch {}
+    try {
+      applyArea(window.location.pathname);
+    } catch {
+      // Ignore: the area is also derived from router events below.
+    }
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         applyArea(event.urlAfterRedirects);

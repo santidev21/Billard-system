@@ -48,13 +48,32 @@ export class OfflineSyncService {
 
     switch (type) {
       case 'start':
-        await this.api.startSession(slug, tableId, payload['whitePlayerName'] as string || 'Jugador 1', payload['yellowPlayerName'] as string || 'Jugador 2', (payload['gameMode'] as 'Managed' | 'FreeMode') || 'FreeMode', transactionId);
+        await this.api.startSession(
+          slug,
+          tableId,
+          (payload['whitePlayerName'] as string) || 'Jugador 1',
+          (payload['yellowPlayerName'] as string) || 'Jugador 2',
+          (payload['gameMode'] as 'Managed' | 'FreeMode') || 'FreeMode',
+          transactionId,
+        );
         break;
       case 'score':
-        await this.api.score(slug, tableId, payload['playerColor'] as 'white' | 'yellow', payload['delta'] as number, transactionId);
+        await this.api.score(
+          slug,
+          tableId,
+          payload['playerColor'] as 'white' | 'yellow',
+          payload['delta'] as number,
+          transactionId,
+        );
         break;
       case 'players':
-        await this.api.renamePlayers(slug, tableId, payload['whitePlayerName'] as string, payload['yellowPlayerName'] as string, transactionId);
+        await this.api.renamePlayers(
+          slug,
+          tableId,
+          payload['whitePlayerName'] as string,
+          payload['yellowPlayerName'] as string,
+          transactionId,
+        );
         break;
       case 'call-waiter':
         await this.api.callWaiter(slug, tableId);
@@ -63,7 +82,13 @@ export class OfflineSyncService {
         await this.api.requestCheck(slug, tableId);
         break;
       case 'consumption':
-        await this.api.addConsumption(slug, tableId, payload['productId'] as string, payload['quantity'] as number, transactionId);
+        await this.api.addConsumption(
+          slug,
+          tableId,
+          payload['productId'] as string,
+          payload['quantity'] as number,
+          transactionId,
+        );
         break;
       case 'finish':
         await this.api.finishSession(slug, tableId, transactionId);
