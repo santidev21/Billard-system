@@ -7,6 +7,8 @@
    - Para duraciones de buffer de 5 minutos en resolución 1080p, la memoria de la pestaña del navegador puede superar los 150 MB. Se recomienda configurar 720p @ 30 FPS en `Settings` para dispositivos con memoria RAM limitada (< 4 GB).
 3. **Bloqueo de Sockets por Antivirus/Firewall en Windows**:
    - Algunas configuraciones de Windows Firewall pueden bloquear el puerto 5000 para conexiones entrantes desde otras computadoras o celulares en la misma red LAN. Se debe agregar una regla de entrada en el Firewall para el puerto 5000 durante la instalación.
+4. **Cámaras IP y mixed-content**:
+   - La página HTTPS (`billard.santidev21.tech`) sólo puede alcanzar el bridge local por `localhost`. Para abrir la app desde otro dispositivo de la LAN haría falta servir el bridge por HTTPS con un certificado de confianza. Ver [ip-cameras.md](ip-cameras.md).
 ---
 
 ## Issue registrado 2026-08-04

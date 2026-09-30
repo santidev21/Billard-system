@@ -57,9 +57,13 @@ export class CameraViewComponent implements OnInit, OnDestroy {
     this.attached = false;
   }
 
-  onDeviceChange(deviceId: string): void {
-    this.cam.onDeviceChange(deviceId);
+  onSourceChange(key: string): void {
+    this.cam.onSourceChange(key);
     this.attached = false;
+  }
+
+  async refreshCameras(): Promise<void> {
+    await this.cam.refreshIpCameras();
   }
 
   async openReplay(): Promise<void> {

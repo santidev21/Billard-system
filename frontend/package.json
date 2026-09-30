@@ -24,6 +24,7 @@
     "@angular/platform-browser-dynamic": "~22.2.0",
     "@angular/router": "~22.2.0",
     "@microsoft/signalr": "^8.0.7",
+    "fix-webm-duration": "^1.0.6",
     "rxjs": "~7.8.1",
     "tslib": "^2.6.2",
     "zone.js": "~0.16.3"

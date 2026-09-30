@@ -1,0 +1,44 @@
+# Local camera bridge — run with:
+#   docker compose -f docker-compose.camera.yml up -d --build
+#
+# Runs on the machine that displays the Billard app (same LAN as the cameras).
+# Uses host networking so the bridge sees the LAN interfaces for discovery and
+# go2rtc advertises LAN ICE candidates the browser can reach.
+#
+# Configure CAMERA_* in .env (see .env.example).
+
+name: billard-camera
+
+services:
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: billard-go2rtc
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      # Writable state volume: go2rtc persists the streams added by the bridge.
+      - go2rtc-config:/config
+      # Base config (read-only) is copied into the volume on first run.
+      - ./camera-bridge/go2rtc.yaml:/config-base/go2rtc.yaml:ro
+    command: sh -c "cp -f /config-base/go2rtc.yaml /config/go2rtc.yaml; exec go2rtc -config /config/go2rtc.yaml"
+
+  camera-bridge:
+    build: ./camera-bridge
+    container_name: billard-camera-bridge
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - go2rtc
+    environment:
+      - BRIDGE_PORT=${BRIDGE_PORT:-8089}
+      - BRIDGE_HOST=${BRIDGE_HOST:-127.0.0.1}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://billard.santidev21.tech,http://localhost:4200,http://127.0.0.1:4200,http://localhost:5000,http://127.0.0.1:5000}
+      - GO2RTC_URL=http://127.0.0.1:1984
+      - CAMERA_USER=${CAMERA_USER:-admin}
+      - CAMERA_PASSWORD=${CAMERA_PASSWORD:-}
+      - CAMERA_SCAN_SUBNETS=${CAMERA_SCAN_SUBNETS:-}
+      - CAMERA_RTSP_PATH=${CAMERA_RTSP_PATH:-/cam/realmonitor?channel=1&subtype=0}
+      - CAMERA_AUTO_H264=${CAMERA_AUTO_H264:-true}
+
+volumes:
+  go2rtc-config:

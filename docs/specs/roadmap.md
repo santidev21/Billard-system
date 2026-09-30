@@ -10,6 +10,7 @@
 2. **Integración con Cámaras IP y Múltiples Ángulos**:
    - Soporte para transmisión RSTP / WebRTC desde cámaras de red IP.
    - Selección de múltiples cámaras por mesa (ej. cámara superior + cámara lateral).
+   - _Estado 2026-09-30_: primera versión en LAN (descubrimiento + WebRTC + auto-H.264) en [ip-cameras.md](ip-cameras.md). Pendiente: bridge por HTTPS para usarlo desde otros dispositivos y selección por mesa.
 3. **Impresión de Tiquetes y Facturación Electrónica**:
    - Integración con impresoras térmicas POS USB/Bluetooth para recibos de cobro al finalizar la mesa.
    - Módulo de facturación electrónica DIAN / local.

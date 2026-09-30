@@ -13,19 +13,37 @@
       <span class="dot"></span> EN VIVO
     </div>
 
-    @if (cam.devices().length > 1) {
+    @if (cam.cameraOn()) {
+      <div class="rec-badge" [class.hidden]="!cam.cameraOn()">
+        ● REC {{ cam.recordedSeconds() }}s
+      </div>
+    }
+    @if (cam.recordingError(); as recErr) {
+      <div class="cam-error" role="alert">Grabación: {{ recErr }}</div>
+    }
+
+    @if (cam.sources().length > 1) {
       <select
         class="overlay-device"
         [class.hidden]="!cam.cameraOn()"
         aria-label="Seleccionar cámara"
-        (change)="onDeviceChange($any($event.target).value)"
+        (change)="onSourceChange($any($event.target).value)"
       >
-        @for (d of cam.devices(); track d.deviceId) {
-          <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">
-            {{ d.label || 'Cámara' }}
-          </option>
+        @for (s of cam.sources(); track s.key) {
+          <option [value]="s.key" [selected]="s.key === cam.selectedKey()">{{ s.label }}</option>
         }
       </select>
+    }
+
+    @if (cam.bridgeAvailable()) {
+      <button
+        class="overlay-btn overlay-refresh"
+        [class.hidden]="!cam.cameraOn()"
+        [disabled]="cam.bridgeScanning()"
+        (click)="refreshCameras()"
+      >
+        {{ cam.bridgeScanning() ? 'Buscando…' : '🔄' }}
+      </button>
     }
 
     <button class="overlay-btn replay-btn" [class.hidden]="!cam.cameraOn()" (click)="openReplay()">
@@ -52,6 +70,9 @@
             aria-label="Vista en vivo de la mesa"
           ></video>
           <div class="live-indicator on"><span class="dot"></span> EN VIVO</div>
+          @if (cam.cameraOn()) {
+            <div class="rec-badge">● REC {{ cam.recordedSeconds() }}s</div>
+          }
         </div>
       } @else {
         <div class="cam-placeholder">
@@ -61,18 +82,27 @@
       }
 
       <div class="controls">
-        @if (cam.devices().length > 1) {
+        @if (cam.sources().length > 1) {
           <select
             class="device-select"
             aria-label="Seleccionar cámara"
-            (change)="onDeviceChange($any($event.target).value)"
+            (change)="onSourceChange($any($event.target).value)"
           >
-            @for (d of cam.devices(); track d.deviceId) {
-              <option [value]="d.deviceId" [selected]="d.deviceId === cam.selectedDeviceId()">
-                {{ d.label || 'Cámara' }}
+            @for (s of cam.sources(); track s.key) {
+              <option [value]="s.key" [selected]="s.key === cam.selectedKey()">
+                {{ s.label }}
               </option>
             }
           </select>
+        }
+        @if (cam.bridgeAvailable()) {
+          <button
+            class="btn btn-outline"
+            [disabled]="cam.bridgeScanning()"
+            (click)="refreshCameras()"
+          >
+            {{ cam.bridgeScanning() ? 'Buscando…' : '🔄 Cámaras' }}
+          </button>
         }
         <button
           class="btn"
