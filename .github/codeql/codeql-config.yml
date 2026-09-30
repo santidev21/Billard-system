@@ -1,0 +1,15 @@
+# CodeQL configuration for Billard-system.
+#
+# The camera-bridge talks to Dahua/Imou cameras over HTTP Digest (RFC 2617),
+# which mandates MD5. That MD5 is part of the protocol handshake, not a password
+# store, so `js/insufficient-password-hash` is excluded. Everything else keeps
+# the full `security-and-quality` suite.
+
+name: "Billard CodeQL config"
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+  - exclude:
+      id: js/insufficient-password-hash

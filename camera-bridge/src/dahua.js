@@ -6,9 +6,8 @@ const cfg = require('./config');
 
 function md5(value) {
   // MD5 is mandated by HTTP Digest authentication (RFC 2617), which the camera
-  // web API requires. It is not used to store passwords, so the weak-hash
-  // warning does not apply here.
-  // lgtm[js/insufficient-password-hash]
+  // web API requires. It is not used to store passwords. The weak-hash query is
+  // excluded for this file in .github/codeql/codeql-config.yml.
   return crypto.createHash('md5').update(value).digest('hex');
 }
 

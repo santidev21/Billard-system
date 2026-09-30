@@ -14,9 +14,12 @@ function isAllowedOrigin(origin) {
   return !origin || cfg.allowedOrigins.includes(origin);
 }
 
-/** Strip control characters so user-provided values cannot forge log lines. */
-function sanitizeLogValue(value) {
-  return String(value).replace(/[^\x20-\x7E]/g, '');
+/** Map the path to a fixed label so logs never contain raw user input. */
+function routeLabel(pathname) {
+  if (pathname === '/health') return '/health';
+  if (pathname === '/cameras') return '/cameras';
+  if (pathname.startsWith('/go2rtc/')) return '/go2rtc/*';
+  return 'other';
 }
 
 function corsHeaders(req) {
@@ -110,9 +113,12 @@ const server = http.createServer((req, res) => {
   const started = Date.now();
   const parsed = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   res.on('finish', () => {
+    // Only log allow-listed constants, never raw request values (avoids log injection).
+    const method = ['GET', 'POST', 'OPTIONS'].includes(req.method) ? req.method : 'OTHER';
+    const route = routeLabel(parsed.pathname);
+    const originState = isAllowedOrigin(req.headers.origin) ? 'allowed' : 'blocked';
     console.log(
-      `[bridge] ${sanitizeLogValue(req.method)} ${sanitizeLogValue(parsed.pathname)} -> ${res.statusCode}` +
-        ` (${Date.now() - started}ms) origin=${sanitizeLogValue(req.headers.origin || '-')}`,
+      `[bridge] ${method} ${route} -> ${res.statusCode} (${Date.now() - started}ms) origin=${originState}`,
     );
   });
 
