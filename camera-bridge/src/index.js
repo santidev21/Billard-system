@@ -14,6 +14,11 @@ function isAllowedOrigin(origin) {
   return !origin || cfg.allowedOrigins.includes(origin);
 }
 
+/** Strip control characters so user-provided values cannot forge log lines. */
+function sanitizeLogValue(value) {
+  return String(value).replace(/[^\x20-\x7E]/g, '');
+}
+
 function corsHeaders(req) {
   const origin = req.headers.origin;
   const headers = {
@@ -106,8 +111,8 @@ const server = http.createServer((req, res) => {
   const parsed = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   res.on('finish', () => {
     console.log(
-      `[bridge] ${req.method} ${parsed.pathname} -> ${res.statusCode} (${Date.now() - started}ms)` +
-        ` origin=${req.headers.origin || '-'}`,
+      `[bridge] ${sanitizeLogValue(req.method)} ${sanitizeLogValue(parsed.pathname)} -> ${res.statusCode}` +
+        ` (${Date.now() - started}ms) origin=${sanitizeLogValue(req.headers.origin || '-')}`,
     );
   });
 
