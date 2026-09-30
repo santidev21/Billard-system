@@ -20,7 +20,7 @@ Billard-system/
 ├─ frontend/        # Angular 22 application (src/app: core, features, shared)
 ├─ camera-bridge/    # Local LAN camera bridge (Node): discovery + CORS proxy for go2rtc
 ├─ deploy/          # Nginx config, deployment guide
-├─ docs/            # Guides, screenshots, specs (docs/specs/)
+├─ docs/            # Guides, specs, ADRs (docs/specs/, docs/adr/)
 ├─ .opencode/       # AI home: agent/, command/, skills/ (tracked; local plugin scaffold ignored)
 ├─ .github/         # CI/CD workflows
 ├─ Dockerfile       # Multi-stage single-image build
@@ -58,6 +58,17 @@ Angular 22 SPA in `frontend/src/app` (`core/` auth/API/SignalR/models, `features
 - `.opencode/` is the AI home (tracked in git): `skills/` (task playbooks in `SKILL.md` format), `agent/` (per-area playbooks: backend, frontend, reviewer), `command/` (shortcuts: /test, /migrate). Local plugin scaffold (`node_modules`, `package.json`) is ignored.
 - `opencode.json` holds instructions, MCP servers and permissions. Skills, agents and commands need no config — opencode auto-discovers `.opencode/`.
 - `AGENTS.md` is the single source of truth; `docs/specs/` holds details.
+
+## Documentation Policy
+
+Docs capture decisions and current state, never session narration.
+
+- **Allowed:** `README` (how to run), `docs/adr/NNN-*.md` (one decision: context, options, decision,
+  consequences), `docs/specs/*.md` (current design and business rules), runbooks (`DEPLOY.md`, …)
+  and any current audit/security doc.
+- **Forbidden:** phase reports, progress logs, "what I did" narration and per-session summaries.
+  When a change needs a durable record, update the relevant spec or add an ADR — do not create a
+  report file. This applies to AI output too.
 
 ## Working Rules For This Repo
 - Language: all code, comments, XML docs, tests, commit messages, PR titles/descriptions, docs (`README`, `docs/`, `AGENTS.md`), and AI output must be in English. Only user-facing UI strings may be in Spanish (via i18n files), never hardcoded Spanish in code/comments.

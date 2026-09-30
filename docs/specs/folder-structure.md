@@ -6,8 +6,7 @@ c:\Dev\Billard-system\
 │   ├── 00-project-overview.md
 │   ├── 01-architecture.md
 │   ├── 02-tech-stack.md
-│   ├── ...
-│   └── progress.md
+│   └── ...
 ├── backend/                            # Solución C# / .NET 9
 │   ├── BilliardSystem.sln
 │   ├── src/
