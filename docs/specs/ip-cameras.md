@@ -71,17 +71,35 @@ Variables en `.env` (ver `.env.example`):
   puerto en la LAN.
 - Nunca reenviar estos puertos desde el router hacia internet.
 
-## Puesta en marcha
+## Puesta en marcha rápida (por PC)
 
-```bash
-# en la PC del local (misma LAN que las cámaras)
-cp .env.example .env      # completar CAMERA_PASSWORD
-npm run camera:up         # docker compose -f docker-compose.camera.yml up -d --build
-npm run camera:logs
-```
+En **cada PC** que va a mostrar la app:
 
-La base de datos y la app **no** se levantan con este compose: es sólo el bridge
-de cámara y usa `network_mode: host`.
+1. Instalar **Docker + Compose**.
+2. Clonar el repo y crear el `.env`:
+   ```bash
+   cp .env.example .env
+   # Editar .env con los datos de ESTE local:
+   #   CAMERA_USER=admin
+   #   CAMERA_PASSWORD=<contraseña del dispositivo de la cámara>
+   ```
+3. Levantar el bridge:
+   ```bash
+   npm run camera:up      # = docker compose -f docker-compose.camera.yml up -d --build
+   ```
+4. Abrir la app **en esa misma PC** (local `http://localhost:5000` o
+   `https://billard.santidev21.tech`) y tocar el botón de cámara → elegir la cámara IP.
+
+Notas:
+- La contraseña de la cámara va **solo** en el `.env` del bridge local. **La VPS no la
+  necesita** ni ve las cámaras.
+- El bridge **descubre** las cámaras solo (escaneo de la LAN) y les pone **H.264**
+  automáticamente; no hay que cargar IPs.
+- Si cambiás la contraseña de la cámara, actualizá `CAMERA_PASSWORD` y reiniciá:
+  `npm run camera:down && npm run camera:up`.
+- Ver estado / logs: `npm run camera:logs`.
+- La app **no** se levanta con este compose: es solo el bridge de cámara
+  (`network_mode: host`).
 
 ## Limitaciones conocidas
 
