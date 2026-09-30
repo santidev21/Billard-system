@@ -7,7 +7,14 @@
    - Promedio de carambolas por partida y tacada máxima.
    - Gráficas de rendimiento histórico por jugador y por mesa.
    - Tiempos de ocupación pico por día, semana y mes.
-2. **Integración con Cámaras IP y Múltiples Ángulos**:
+
+2. **Hardening pendiente** (ver [known-issues.md](known-issues.md)):
+   - Autenticación JWT real (hoy token opaco).
+   - Paginación/filtros de historial y auditoría.
+   - Pruebas de integración frontend.
+   - Pasar `EnsureCreatedAsync` a migraciones EF.
+
+3. **Integración con Cámaras IP y Múltiples Ángulos**:
    - Soporte para transmisión RSTP / WebRTC desde cámaras de red IP.
    - Selección de múltiples cámaras por mesa (ej. cámara superior + cámara lateral).
    - _Estado 2026-09-30_: primera versión en LAN (descubrimiento + WebRTC + auto-H.264) en [ip-cameras.md](ip-cameras.md). Pendiente: bridge por HTTPS para usarlo desde otros dispositivos y selección por mesa.
