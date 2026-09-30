@@ -40,7 +40,8 @@
               }
             ],
             "styles": ["src/styles.css"],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": ["fix-webm-duration"]
           },
           "configurations": {
             "production": {

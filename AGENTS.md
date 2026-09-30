@@ -18,6 +18,7 @@ Real-time billiard hall management platform:
 Billard-system/
 ├─ backend/         # .NET solution (BilliardSystem.slnx: API, Application, Domain, Infrastructure, Tests)
 ├─ frontend/        # Angular 22 application (src/app: core, features, shared)
+├─ camera-bridge/    # Local LAN camera bridge (Node): discovery + CORS proxy for go2rtc
 ├─ deploy/          # Nginx config, deployment guide
 ├─ docs/            # Guides, screenshots, specs (docs/specs/)
 ├─ .opencode/       # AI home: agent/, command/, skills/ (tracked; local plugin scaffold ignored)
@@ -27,6 +28,7 @@ Billard-system/
 ├─ package.json     # Root orchestration scripts (dev, db:*, docker:dev, build, test)
 ├─ docker-compose.yml
 ├─ docker-compose.local.yml
+├─ docker-compose.camera.yml
 ├─ opencode.json    # opencode config: instructions, MCP, permissions
 └─ .env.example
 ```
@@ -43,6 +45,7 @@ Angular 22 SPA in `frontend/src/app` (`core/` auth/API/SignalR/models, `features
 - Migrations: `npm run db:migrate` (ensures DB; migrations auto-apply at startup) · `npm run db:migration:add -- <Name>` (see `db-migrations`, or `/migrate`)
 - DB: `npm run db:up` (Postgres on `127.0.0.1:5433`, loopback-only) · `npm run db:down`
 - Docker: `npm run docker:dev` (= `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build`) · `npm run docker:down` (see `docker-dev`)
+- IP cameras (local bridge): `npm run camera:up` (go2rtc + camera-bridge, host network) · `npm run camera:down` · `npm run camera:logs` · `npm run camera:bridge` (run the bridge directly). See `docs/specs/ip-cameras.md`.
 - Shortcuts: `/test` (both suites) · `/migrate`
 
 ## Ports

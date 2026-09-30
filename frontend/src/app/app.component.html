@@ -119,3 +119,52 @@
     </div>
   </div>
 }
+
+@if (cam.pickerOpen()) {
+  <div class="overlay" role="presentation" (keydown.escape)="closeCameraPicker()">
+    <div class="card glass" role="dialog" aria-modal="true" aria-labelledby="camera-picker-title">
+      <header>
+        <h3 id="camera-picker-title">Elegir cámara</h3>
+        <button class="btn btn-outline close" (click)="closeCameraPicker()" aria-label="Cerrar">
+          ✕
+        </button>
+      </header>
+
+      @if (!cam.bridgeAvailable()) {
+        <p class="picker-warn">
+          No se pudo conectar al bridge local (<code>{{ cam.bridgeUrl }}</code
+          >). Asegurate de que esté corriendo en esta misma PC.
+        </p>
+      } @else if (cam.bridgeScanning()) {
+        <p class="picker-hint">Buscando cámaras en la red…</p>
+      } @else if (cam.ipCameras().length === 0) {
+        <p class="picker-hint">No se encontraron cámaras IP en la red.</p>
+      }
+
+      <div class="picker-list">
+        @for (s of cam.sources(); track s.key) {
+          <button
+            type="button"
+            class="picker-item"
+            [class.on]="s.key === cam.selectedKey()"
+            (click)="pickCamera(s.key)"
+          >
+            <span class="picker-icon">{{ s.kind === 'ip' ? '📡' : '🎥' }}</span>
+            <span class="picker-text">
+              <span class="picker-label">{{ s.label }}</span>
+              @if (s.detail) {
+                <span class="picker-detail">{{ s.detail }}</span>
+              }
+            </span>
+          </button>
+        }
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-outline" [disabled]="cam.bridgeScanning()" (click)="searchCameras()">
+          {{ cam.bridgeScanning() ? 'Buscando…' : '🔄 Buscar cámaras IP' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

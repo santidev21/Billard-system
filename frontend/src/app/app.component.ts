@@ -77,13 +77,31 @@ export class AppComponent implements OnInit {
       void this.sync.flush();
     });
     window.addEventListener('offline', () => this.online.set(false));
+    // Probe cameras app-wide so the picker works even before a table view mounts.
+    void this.cam.init();
     await this.queue.open();
     await this.signalr.connect();
     void this.sync.flush();
   }
 
+  async searchCameras(): Promise<void> {
+    if (this.cam.bridgeAvailable()) {
+      await this.cam.refreshIpCameras();
+    } else {
+      await this.cam.retryBridge();
+    }
+  }
+
   toggleCamera(): void {
     void this.cam.toggle();
+  }
+
+  pickCamera(key: string): void {
+    void this.cam.selectSource(key);
+  }
+
+  closeCameraPicker(): void {
+    this.cam.closePicker();
   }
 
   skipToContent(): void {

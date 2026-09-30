@@ -22,6 +22,7 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 | **Consumption** | Add products to active sessions with real-time total updates |
 | **Waiter/Check Calls** | Players request service or the check from the table UI |
 | **Camera Replay** | Circular video buffer for instant replay on each table |
+| **IP Cameras (LAN)** | Discover Imou/Dahua & IP cameras on the local network and stream them over WebRTC — no vendor app (see [docs/specs/ip-cameras.md](docs/specs/ip-cameras.md)) |
 | **Catalog** | Manage products and categories |
 | **History** | Full match history with filters |
 | **Audit Log** | Track every action with user, timestamp, and details |
@@ -39,6 +40,7 @@ A real-time billiard hall management platform built with Angular and .NET. Manag
 - **Auth**: Custom opaque token sessions with PBKDF2 password hashing
 - **CI/CD**: GitHub Actions (build on VPS via deploy.sh)
 - **Deployment**: Docker + Nginx reverse proxy on VPS
+- **IP cameras**: local camera-bridge (Node) + [go2rtc](https://github.com/AlexxIT/go2rtc) for RTSP → WebRTC on the LAN
 
 ---
 

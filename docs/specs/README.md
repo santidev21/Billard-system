@@ -13,6 +13,7 @@ Detail specs for Billard-system. Start with [AGENTS.md](../../AGENTS.md) for the
 - [domain-events.md](domain-events.md) — internal event bus
 - [database.md](database.md) — table schemas, engine, migrations
 - [video-buffer.md](video-buffer.md) — camera replay buffer
+- [ip-cameras.md](ip-cameras.md) — IP cameras over the local LAN bridge
 - [deployment.md](deployment.md) — deploy notes
 - [decisions.md](decisions.md) — architecture decisions
 - [known-issues.md](known-issues.md) — known issues

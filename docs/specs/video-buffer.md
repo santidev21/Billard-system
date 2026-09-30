@@ -24,15 +24,15 @@ Para garantizar la repetición instantánea sin interrumpir la grabación de la 
 
 ## Componentes Técnicos
 1. **`CircularVideoBuffer` (Servicio Angular)**:
-   - Mantiene una cola en memoria RAM con los últimos fragmentos WebM/MP4 de 2000 ms.
-   - El número de fragmentos mantenidos en RAM se calcula dinámicamente según la duración máxima de replay configurada (`MaxReplaySeconds`):
-     - 30 segundos = 15 fragmentos.
-     - 60 segundos (1 min) = 30 fragmentos.
-     - 120 segundos (2 min) = 60 fragmentos.
-     - 180 segundos (3 min) = 90 fragmentos.
-     - 300 segundos (5 min) = 150 fragmentos.
+   - Mantiene una cola en memoria RAM con los últimos fragmentos WebM de 1000 ms.
+   - El número de fragmentos mantenidos en RAM se calcula dinámicamente según la duración máxima de replay configurada (`MaxReplaySeconds`); por defecto **180 s (3 min)**:
+     - 30 segundos = 30 fragmentos.
+     - 60 segundos (1 min) = 60 fragmentos.
+     - 120 segundos (2 min) = 120 fragmentos.
+     - 180 segundos (3 min) = 180 fragmentos.
+     - 300 segundos (5 min) = 300 fragmentos.
 2. **Grabación Ininterrumpida**:
-   - La instancia de `MediaRecorder` emite el evento `ondataavailable` cada 2000 ms.
+   - La instancia de `MediaRecorder` emite el evento `ondataavailable` cada 1000 ms.
    - Estos fragmentos se añaden al arreglo en RAM y el fragmento más antiguo que sobrepase la ventana de tiempo es descartado con Garbage Collection.
 3. **Reproducción de Repetición**:
    - Cuando el usuario solicita "Ver Repetición" (ej. últimos 30 segundos), el servicio toma los últimos 15 fragmentos de la cola, construye un `new Blob(chunks, { type: 'video/webm' })` y asigna la URL `URL.createObjectURL(blob)` al reproductor de repetición modal.
@@ -46,6 +46,6 @@ Para garantizar la repetición instantánea sin interrumpir la grabación de la 
 
 ## Optimización 2026-08-07 (equipos viejos)
 - La cámara se solicita ahora con restricciones amigables a memoria: `width/height ideal 1280x720`, `frameRate ideal 24`, `audio:false` y `videoBitsPerSecond` de 1.5 Mbps en el `MediaRecorder`.
-- El buffer por defecto bajó de 60s a **30s** (configurable por `localStorage.replayBufferSeconds`; si el valor no es numérico se usa 30 por seguridad).
+- El buffer por defecto es de **180 s (3 min)** (configurable por `localStorage.replayBufferSeconds`; si el valor no es numérico se usa 180 por seguridad).
 - **Fix crítico de reproducción**: el ring buffer conservaba y desplazaba chunks con `chunks.shift()`, lo que eliminaba el primer chunk (segmento de inicialización WebM) y el blob resultante no se decodificaba (pantalla gris). Ahora se conserva siempre el chunk 0 y se desplazan solo los demás con `splice(1, length - maxChunks)`.
 - El promedio de `captureFrame()` dispara `recorder.requestData()` y espera ~150 ms antes de ensamblar el blob para que el WebM incluya segmento de inicio válido.
