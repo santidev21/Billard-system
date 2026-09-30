@@ -1,6 +1,19 @@
-.cam { padding: 0.75rem; }
-.feed-wrap { position: relative; border-radius: 12px; overflow: hidden; }
-.live { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; display: block; border-radius: 12px; }
+.cam {
+  padding: 0.75rem;
+}
+.feed-wrap {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.live {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+}
 .cam-placeholder {
   display: flex;
   flex-direction: column;
@@ -14,7 +27,9 @@
   font-size: 0.85rem;
   font-weight: 600;
 }
-.cam-icon { font-size: 2rem; }
+.cam-icon {
+  font-size: 2rem;
+}
 .live-indicator {
   position: absolute;
   top: 10px;
@@ -30,11 +45,31 @@
   background: rgba(0, 0, 0, 0.55);
   color: var(--text-muted);
 }
-.live-indicator .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748B; }
-.live-indicator.on .dot { background: #F87171; animation: blink 1.2s infinite; }
-.live-indicator.on { color: #FCA5A5; }
-@keyframes blink { 50% { opacity: 0.2; } }
-.controls { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }
+.live-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+}
+.live-indicator.on .dot {
+  background: #f87171;
+  animation: blink 1.2s infinite;
+}
+.live-indicator.on {
+  color: #fca5a5;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
 .device-select {
   flex: 1;
   padding: 0.5rem 0.6rem;
@@ -46,17 +81,22 @@
   font-weight: 600;
   max-width: 200px;
 }
-.replay-btn { flex: 1; }
+.replay-btn {
+  flex: 1;
+}
 .cam-error {
   margin-top: 0.5rem;
   padding: 0.4rem 0.7rem;
   border-radius: 8px;
   background: rgba(239, 68, 68, 0.15);
-  color: #FCA5A5;
+  color: #fca5a5;
   font-size: 0.8rem;
   font-weight: 600;
 }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* Fill mode (player stage) — same 2:1 box as the table */
 .cam-fill {
@@ -113,7 +153,9 @@
   background: rgba(14, 24, 18, 0.62);
   backdrop-filter: blur(10px);
 }
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 .cam-fill .cam-error {
   position: absolute;

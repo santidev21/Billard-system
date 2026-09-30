@@ -1,6 +1,14 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
-export type OfflineCommandType = 'start' | 'score' | 'players' | 'call-waiter' | 'request-check' | 'consumption' | 'finish' | 'round';
+export type OfflineCommandType =
+  | 'start'
+  | 'score'
+  | 'players'
+  | 'call-waiter'
+  | 'request-check'
+  | 'consumption'
+  | 'finish'
+  | 'round';
 
 export interface OfflineCommand {
   id?: string;

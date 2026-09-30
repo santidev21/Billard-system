@@ -691,8 +691,11 @@ public static class BilliardEndpoints
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
             {
-                tableId = id, playerColor = color, delta = request.Delta,
-                newScore = scoreLog.ResultingScore, totalCarambolas = match.TotalCarambolas
+                tableId = id,
+                playerColor = color,
+                delta = request.Delta,
+                newScore = scoreLog.ResultingScore,
+                totalCarambolas = match.TotalCarambolas
             }, ct);
             return Results.Ok(new ScoreResponse(scoreLog.ResultingScore));
         });
@@ -719,7 +722,9 @@ public static class BilliardEndpoints
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerNamesChanged", new
             {
-                tableId = id, whitePlayerName = request.WhitePlayerName.Trim(), yellowPlayerName = request.YellowPlayerName.Trim()
+                tableId = id,
+                whitePlayerName = request.WhitePlayerName.Trim(),
+                yellowPlayerName = request.YellowPlayerName.Trim()
             }, ct);
             return Results.Ok();
         });
@@ -885,8 +890,11 @@ public static class BilliardEndpoints
 
             await hub.Clients.Group($"table:{id}").SendAsync("SessionEnded", new
             {
-                tableId = id, matchHistoryId = match.Id,
-                tableTotal = match.TableTotal, consumptionTotal = match.ConsumptionTotal, grandTotal = match.GrandTotal,
+                tableId = id,
+                matchHistoryId = match.Id,
+                tableTotal = match.TableTotal,
+                consumptionTotal = match.ConsumptionTotal,
+                grandTotal = match.GrandTotal,
                 winnerName = match.WhiteScore >= match.YellowScore ? match.WhitePlayerName : match.YellowPlayerName
             }, ct);
             await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("TableStateUpdated", new { tableId = id, status = "Available" }, ct);
@@ -911,7 +919,11 @@ public static class BilliardEndpoints
 
             await hub.Clients.Group($"table:{id}").SendAsync("PlayerScored", new
             {
-                tableId = id, playerColor = "white", delta = 0, newScore = 0, totalCarambolas = 0
+                tableId = id,
+                playerColor = "white",
+                delta = 0,
+                newScore = 0,
+                totalCarambolas = 0
             }, ct);
             return Results.Ok(new RoundResponse(round.Id, round.RoundNumber, round.WhiteScore, round.YellowScore, round.WinnerName));
         });

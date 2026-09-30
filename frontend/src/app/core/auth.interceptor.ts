@@ -11,9 +11,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const token = auth.getToken();
 
-  const cloned = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : req;
+  const cloned = token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
 
   return next(cloned).pipe(
     catchError((error) => {
@@ -34,13 +32,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               auth.logout();
               void router.navigate(['/login']);
               return throwError(() => err);
-            })
+            }),
           );
         }
         auth.logout();
         void router.navigate(['/login']);
       }
       return throwError(() => error);
-    })
+    }),
   );
 };

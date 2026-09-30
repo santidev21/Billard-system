@@ -4,10 +4,24 @@
     <p class="hint">Ingresa los datos de tu local para acceder.</p>
 
     <label for="login-username">Nombre del local</label>
-    <input id="login-username" [(ngModel)]="userName" name="userName" type="text" placeholder="Mi Billar" autocomplete="username" />
+    <input
+      id="login-username"
+      [(ngModel)]="userName"
+      name="userName"
+      type="text"
+      placeholder="Mi Billar"
+      autocomplete="username"
+    />
 
     <label for="login-password">Clave</label>
-    <input id="login-password" [(ngModel)]="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <input
+      id="login-password"
+      [(ngModel)]="password"
+      name="password"
+      type="password"
+      placeholder="••••••••"
+      autocomplete="current-password"
+    />
 
     @if (error(); as e) {
       <div class="error" role="alert">{{ e }}</div>
@@ -25,6 +39,8 @@
 
     <div class="divider"><span>o</span></div>
 
-    <button type="button" class="btn btn-outline" routerLink="/t/demo/free">Jugar modo libre</button>
+    <button type="button" class="btn btn-outline" routerLink="/t/demo/free">
+      Jugar modo libre
+    </button>
   </form>
 </section>

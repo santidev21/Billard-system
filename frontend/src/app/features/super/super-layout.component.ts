@@ -76,7 +76,10 @@ export class SuperLayoutComponent implements OnInit {
     }
     this.loading.set(true);
     try {
-      const res = await this.api.createLocal(this.newLocalName.trim(), this.newLocalPassword.trim() || undefined);
+      const res = await this.api.createLocal(
+        this.newLocalName.trim(),
+        this.newLocalPassword.trim() || undefined,
+      );
       this.createdLocal.set({ name: res.name, slug: res.slug, password: res.defaultPassword });
       this.newLocalName = '';
       this.newLocalPassword = '';

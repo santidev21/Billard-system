@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Input, Output, ViewChild, AfterViewInit, OnChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  ViewChild,
+  AfterViewInit,
+  OnChanges,
+} from '@angular/core';
 
 @Component({
   selector: 'app-replay-player',

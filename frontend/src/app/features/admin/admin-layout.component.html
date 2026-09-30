@@ -1,6 +1,8 @@
 <div class="admin-layout">
   <nav class="admin-nav">
-    <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+    <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+      >Dashboard</a
+    >
     <a routerLink="/admin/catalog" routerLinkActive="active">Catálogo</a>
     <a routerLink="/admin/history" routerLinkActive="active">Historial</a>
     <a routerLink="/admin/audit" routerLinkActive="active">Auditoría</a>
@@ -12,8 +14,20 @@
 </div>
 
 @if (callPopup(); as n) {
-  <div class="popup-backdrop" (click)="closePopup()" (keydown.escape)="closePopup()">
-    <div class="popup-card glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="call-popup-title">
+  <div
+    class="popup-backdrop"
+    role="presentation"
+    (click)="closePopup()"
+    (keydown.escape)="closePopup()"
+  >
+    <div
+      class="popup-card glass"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="call-popup-title"
+    >
       <div class="popup-icon" aria-hidden="true">🔔</div>
       <h3 id="call-popup-title">{{ popupTitle(n) }}</h3>
       <p>{{ popupBody(n) }}</p>

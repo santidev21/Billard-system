@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { RouterLink } from '@angular/router';
@@ -18,7 +18,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
   styleUrls: ['./dashboard.component.css'],
   standalone: true,
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly signalr = inject(SignalRService);
@@ -28,7 +28,9 @@ export class DashboardComponent implements OnInit {
   readonly summary = signal<DashboardSummary | null>(null);
   readonly topProducts = signal<TopProduct[]>([]);
   readonly details = signal<Record<string, TableDetail>>({});
-  readonly notifications = signal<{ id: string; text: string; type: string; tableId: string }[]>([]);
+  readonly notifications = signal<{ id: string; text: string; type: string; tableId: string }[]>(
+    [],
+  );
   readonly showAddTable = signal(false);
   readonly showRateCard = signal(false);
   readonly selectedTable = signal<TableDetail | null>(null);
@@ -168,7 +170,9 @@ export class DashboardComponent implements OnInit {
 
   private async doRefresh(): Promise<void> {
     const [tables, summary, top] = await Promise.all([
-      this.slug ? this.api.getTenantTables(this.slug).catch(() => [] as TableResponse[]) : this.api.getTables().catch(() => [] as TableResponse[]),
+      this.slug
+        ? this.api.getTenantTables(this.slug).catch(() => [] as TableResponse[])
+        : this.api.getTables().catch(() => [] as TableResponse[]),
       this.api.getDashboardSummary().catch(() => null),
       this.api.getTopProducts().catch(() => [] as TopProduct[]),
     ]);
@@ -191,18 +195,27 @@ export class DashboardComponent implements OnInit {
         } catch {
           return [table.id, null as unknown as TableDetail] as const;
         }
-      })
+      }),
     );
     return Object.fromEntries(entries.filter(([, d]) => !!d));
   }
 
-  private pushNotification(n: { type: string; tableId: string; tableName: string; total?: number }): void {
-    const text = n.type === 'waiter'
-      ? `${n.tableName} solicita mesero`
-      : `${n.tableName} pide cuenta · Total $${fmtMoney(n.total ?? 0)}`;
+  private pushNotification(n: {
+    type: string;
+    tableId: string;
+    tableName: string;
+    total?: number;
+  }): void {
+    const text =
+      n.type === 'waiter'
+        ? `${n.tableName} solicita mesero`
+        : `${n.tableName} pide cuenta · Total $${fmtMoney(n.total ?? 0)}`;
     const entry = { id: String(++this.notifId), text, type: n.type, tableId: n.tableId };
     this.notifications.update((list) => [entry, ...list].slice(0, 6));
-    setTimeout(() => this.notifications.update((list) => list.filter((x) => x.id !== entry.id)), 9000);
+    setTimeout(
+      () => this.notifications.update((list) => list.filter((x) => x.id !== entry.id)),
+      9000,
+    );
   }
 
   dismissNotification(id: string): void {
@@ -211,22 +224,33 @@ export class DashboardComponent implements OnInit {
 
   statusDot(status: string): string {
     switch (status) {
-      case 'Available': return 'free';
-      case 'Occupied': return 'occupied';
-      case 'WaitingForWaiter': return 'waiter';
-      case 'WaitingForCheck': return 'check';
-      default: return 'free';
+      case 'Available':
+        return 'free';
+      case 'Occupied':
+        return 'occupied';
+      case 'WaitingForWaiter':
+        return 'waiter';
+      case 'WaitingForCheck':
+        return 'check';
+      default:
+        return 'free';
     }
   }
 
   statusName(status: string): string {
     switch (status) {
-      case 'Available': return 'Libre';
-      case 'Occupied': return 'Ocupada';
-      case 'WaitingForWaiter': return 'Esperando mesero';
-      case 'WaitingForCheck': return 'Esperando cuenta';
-      case 'OutOfService': return 'Fuera de servicio';
-      default: return status;
+      case 'Available':
+        return 'Libre';
+      case 'Occupied':
+        return 'Ocupada';
+      case 'WaitingForWaiter':
+        return 'Esperando mesero';
+      case 'WaitingForCheck':
+        return 'Esperando cuenta';
+      case 'OutOfService':
+        return 'Fuera de servicio';
+      default:
+        return status;
     }
   }
 
@@ -303,9 +327,7 @@ export class DashboardComponent implements OnInit {
 
   async openTable(tableId: string): Promise<void> {
     try {
-      const detail = this.slug
-        ? await this.api.getTenantTable(this.slug, tableId)
-        : null;
+      const detail = this.slug ? await this.api.getTenantTable(this.slug, tableId) : null;
       this.selectedTable.set(detail);
     } catch {
       // ignore
@@ -322,7 +344,13 @@ export class DashboardComponent implements OnInit {
     if (!product || !this.slug) {
       return;
     }
-    await this.api.addConsumption(this.slug, tableId, product.id, this.toastQuantity, crypto.randomUUID());
+    await this.api.addConsumption(
+      this.slug,
+      tableId,
+      product.id,
+      this.toastQuantity,
+      crypto.randomUUID(),
+    );
     this.toastProductId = '';
     this.toastQuantity = 1;
     await this.refresh();
@@ -344,7 +372,13 @@ export class DashboardComponent implements OnInit {
 
   async saveEditConsumption(tableId: string, consumptionId: string): Promise<void> {
     if (!this.slug || this.editQuantity < 1) return;
-    await this.api.updateConsumption(this.slug, tableId, consumptionId, this.editQuantity, crypto.randomUUID());
+    await this.api.updateConsumption(
+      this.slug,
+      tableId,
+      consumptionId,
+      this.editQuantity,
+      crypto.randomUUID(),
+    );
     this.editingConsumptionId = '';
     this.editQuantity = 1;
     await this.refresh();
@@ -377,7 +411,16 @@ export class DashboardComponent implements OnInit {
     if (!table) {
       return;
     }
-    this.selectedTable.set({ id: table.id, name: table.name, code: table.code, status: table.status, hourlyRate: table.hourlyRate, isActive: table.isActive, activeMatch: null, activeMatchId: null });
+    this.selectedTable.set({
+      id: table.id,
+      name: table.name,
+      code: table.code,
+      status: table.status,
+      hourlyRate: table.hourlyRate,
+      isActive: table.isActive,
+      activeMatch: null,
+      activeMatchId: null,
+    });
     this.selectedWhite = 'Jugador 1';
     this.selectedYellow = 'Jugador 2';
     this.showStartForm = true;
@@ -387,7 +430,14 @@ export class DashboardComponent implements OnInit {
     if (!this.slug) {
       return;
     }
-    await this.api.startSession(this.slug, tableId, this.selectedWhite.trim() || 'Jugador 1', this.selectedYellow.trim() || 'Jugador 2', 'Managed', crypto.randomUUID());
+    await this.api.startSession(
+      this.slug,
+      tableId,
+      this.selectedWhite.trim() || 'Jugador 1',
+      this.selectedYellow.trim() || 'Jugador 2',
+      'Managed',
+      crypto.randomUUID(),
+    );
     this.showStartForm = false;
     this.showFinishConfirm.set(false);
     await this.refresh();

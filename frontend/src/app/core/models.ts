@@ -1,4 +1,5 @@
-export type TableStatus = 'Available' | 'Occupied' | 'WaitingForWaiter' | 'WaitingForCheck' | 'OutOfService';
+export type TableStatus =
+  'Available' | 'Occupied' | 'WaitingForWaiter' | 'WaitingForCheck' | 'OutOfService';
 export type GameMode = 'Managed' | 'FreeMode';
 export type PlayerColor = 'white' | 'yellow';
 
@@ -33,7 +34,14 @@ export interface MatchDetail {
   consumptionTotal: number;
   roundNumber: number;
   consumptions: ConsumptionAmount[];
-  rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[];
+  rounds: {
+    roundNumber: number;
+    whiteScore: number;
+    yellowScore: number;
+    winnerName: string | null;
+    endedAt: string;
+    durationSeconds: number;
+  }[];
 }
 
 export interface TableDetail {

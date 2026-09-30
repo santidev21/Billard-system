@@ -27,6 +27,8 @@ interface UiConsumption {
   standalone: true,
 })
 export class PlayerComponent implements OnInit, OnDestroy {
+  private readonly router = inject(Router);
+
   private readonly api = inject(ApiService);
   private readonly signalr = inject(SignalRService);
   private readonly queue = inject(OfflineQueueService);
@@ -38,7 +40,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly blockedMsg = signal<string | null>(null);
   readonly loading = signal(false);
   readonly showEnded = signal(false);
-  readonly endedSummary = signal<{ time: string; consumptionTotal: number; grandTotal: number; whiteScore?: number; yellowScore?: number; whiteName?: string; yellowName?: string } | null>(null);
+  readonly endedSummary = signal<{
+    time: string;
+    consumptionTotal: number;
+    grandTotal: number;
+    whiteScore?: number;
+    yellowScore?: number;
+    whiteName?: string;
+    yellowName?: string;
+  } | null>(null);
   readonly whiteName = signal('Jugador 1');
   readonly yellowName = signal('Jugador 2');
   readonly whiteScore = signal(0);
@@ -55,7 +65,19 @@ export class PlayerComponent implements OnInit, OnDestroy {
   readonly roundNumber = signal(0);
   readonly lastRound = signal<string | null>(null);
   readonly showRounds = signal(false);
-  readonly rounds = signal<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] } | null>(null);
+  readonly rounds = signal<{
+    whiteRounds: number;
+    yellowRounds: number;
+    currentRoundNumber: number;
+    rounds: {
+      roundNumber: number;
+      whiteScore: number;
+      yellowScore: number;
+      winnerName: string | null;
+      endedAt: string;
+      durationSeconds: number;
+    }[];
+  } | null>(null);
   readonly roundStartedAt = signal<number | null>(null);
   readonly requestSent = signal<'waiter' | 'check' | null>(null);
   readonly products = signal<{ id: string; name: string; price: number }[]>([]);
@@ -117,9 +139,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private slug = '';
 
-  constructor(
-    private readonly router: Router
-  ) {
+  constructor() {
     effect(() => {
       this.signalr.tableStateUpdated();
       if (this.tableId()) {
@@ -202,7 +222,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
               if (shouldStart) {
                 await this.startSession();
               }
-            } catch {}
+            } catch {
+              // Ignore transient errors while probing the table state.
+            }
           }
         }
       } else {
@@ -218,7 +240,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
             if (shouldStart) {
               await this.startSession();
             }
-          } catch {}
+          } catch {
+            // Ignore transient errors while probing the table state.
+          }
         }
       }
 
@@ -277,7 +301,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
           this.yellowScore.set(0);
           this.startedAt.set(null);
           this.roundStartedAt.set(null);
-          this.blockedMsg.set(`La mesa ${this.tableName()} está ocupada por una partida administrada.`);
+          this.blockedMsg.set(
+            `La mesa ${this.tableName()} está ocupada por una partida administrada.`,
+          );
           return;
         }
         this.blockedMsg.set(null);
@@ -344,7 +370,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private async autoSelectTable(slug: string): Promise<void> {
     try {
       const tables = await this.api.getTenantTables(slug);
-      const pick = tables.find((t) => t.status === 'Available' && t.isActive) ?? tables.find((t) => t.isActive) ?? tables[0];
+      const pick =
+        tables.find((t) => t.status === 'Available' && t.isActive) ??
+        tables.find((t) => t.isActive) ??
+        tables[0];
       if (pick) {
         this.tableId.set(pick.id);
         this.tableName.set(pick.name);
@@ -408,12 +437,17 @@ export class PlayerComponent implements OnInit, OnDestroy {
     // monotonic guard: don't let a stale poll (old StartedAt) overwrite a just-started session (00:00 -> old time bug in FreeMode)
     if (currentStart === null || serverStart > currentStart || m.roundNumber > this.roundNumber()) {
       this.startedAt.set(serverStart);
-    } else if (serverStart !== currentStart && currentStart !== null && Math.abs(serverStart - currentStart) < 5000) {
+    } else if (
+      serverStart !== currentStart &&
+      currentStart !== null &&
+      Math.abs(serverStart - currentStart) < 5000
+    ) {
       // small clock skew (server vs client Date.now) — sync to server
       this.startedAt.set(serverStart);
     }
     // round timer: start from last round's end or match start — monotonic to avoid stale poll overwriting a just-closed round (00:00 -> 00:41 bug)
-    const lastRoundEnd = m.rounds.length > 0 ? new Date(m.rounds[m.rounds.length - 1].endedAt).getTime() : serverStart;
+    const lastRoundEnd =
+      m.rounds.length > 0 ? new Date(m.rounds[m.rounds.length - 1].endedAt).getTime() : serverStart;
     const currentRoundStart = this.roundStartedAt();
     if (currentRoundStart === null || lastRoundEnd > currentRoundStart) {
       this.roundStartedAt.set(lastRoundEnd);
@@ -422,7 +456,15 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.roundStartedAt.set(lastRoundEnd);
     }
     this.consumptionTotal.set(m.consumptionTotal);
-    this.consumptions.set(m.consumptions.map((c) => ({ id: c.id, name: c.productName, qty: c.quantity, total: c.total, at: c.createdAt })));
+    this.consumptions.set(
+      m.consumptions.map((c) => ({
+        id: c.id,
+        name: c.productName,
+        qty: c.quantity,
+        total: c.total,
+        at: c.createdAt,
+      })),
+    );
     this.roundNumber.set(m.roundNumber);
     this.startTimer();
   }
@@ -454,7 +496,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.whiteName.set(this.whiteInput.trim() || 'Jugador 1');
     this.yellowName.set(this.yellowInput.trim() || 'Jugador 2');
     if (navigator.onLine && this.slug) {
-      this.api.renamePlayers(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.genTx()).catch(() => undefined);
+      this.api
+        .renamePlayers(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.genTx())
+        .catch(() => undefined);
     }
   }
 
@@ -481,13 +525,31 @@ export class PlayerComponent implements OnInit, OnDestroy {
       try {
         const r = await this.api.finishRound(this.slug, this.tableId(), tx);
         this.roundNumber.set(r.roundNumber);
-        this.lastRound.set(r.winnerName ? `Ronda ${r.roundNumber}: gana ${r.winnerName}` : `Ronda ${r.roundNumber}: empate`);
+        this.lastRound.set(
+          r.winnerName
+            ? `Ronda ${r.roundNumber}: gana ${r.winnerName}`
+            : `Ronda ${r.roundNumber}: empate`,
+        );
         setTimeout(() => this.lastRound.set(null), 4000);
       } catch {
-        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', slug: this.slug, tableId: this.tableId(), payload: {} });
+        await this.queue.enqueue({
+          id: crypto.randomUUID(),
+          transactionId: tx,
+          type: 'round',
+          slug: this.slug,
+          tableId: this.tableId(),
+          payload: {},
+        });
       }
     } else {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'round', slug: this.slug, tableId: this.tableId(), payload: {} });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'round',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: {},
+      });
     }
     this.whiteScore.set(0);
     this.yellowScore.set(0);
@@ -539,13 +601,27 @@ export class PlayerComponent implements OnInit, OnDestroy {
     }
 
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', slug: this.slug, tableId: this.tableId(), payload: { playerColor: color, delta } });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'score',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: { playerColor: color, delta },
+      });
       return;
     }
     try {
       await this.api.score(this.slug, this.tableId(), color, delta, tx);
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'score', slug: this.slug, tableId: this.tableId(), payload: { playerColor: color, delta } });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'score',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: { playerColor: color, delta },
+      });
     }
   }
 
@@ -570,15 +646,40 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.running.set(true);
     this.startTimer();
 
-    const payload = { whitePlayerName: this.whiteName(), yellowPlayerName: this.yellowName(), gameMode: this.gameMode() };
+    const payload = {
+      whitePlayerName: this.whiteName(),
+      yellowPlayerName: this.yellowName(),
+      gameMode: this.gameMode(),
+    };
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', slug: this.slug, tableId: this.tableId(), payload });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'start',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload,
+      });
       return;
     }
     try {
-      await this.api.startSession(this.slug, this.tableId(), this.whiteName(), this.yellowName(), this.gameMode(), tx);
+      await this.api.startSession(
+        this.slug,
+        this.tableId(),
+        this.whiteName(),
+        this.yellowName(),
+        this.gameMode(),
+        tx,
+      );
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'start', slug: this.slug, tableId: this.tableId(), payload });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'start',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload,
+      });
     }
   }
 
@@ -604,17 +705,40 @@ export class PlayerComponent implements OnInit, OnDestroy {
       return;
     }
     const tx = this.genTx();
-    this.consumptions.update((list) => [...list, { id: crypto.randomUUID(), name: product.name, qty: 1, total: product.price, at: new Date().toISOString() }]);
+    this.consumptions.update((list) => [
+      ...list,
+      {
+        id: crypto.randomUUID(),
+        name: product.name,
+        qty: 1,
+        total: product.price,
+        at: new Date().toISOString(),
+      },
+    ]);
     this.consumptionTotal.update((t) => t + product.price);
 
     if (!navigator.onLine || !this.slug) {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', slug: this.slug, tableId: this.tableId(), payload: { productId, quantity: 1 } });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'consumption',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: { productId, quantity: 1 },
+      });
       return;
     }
     try {
       await this.api.addConsumption(this.slug, this.tableId(), productId, 1, tx);
     } catch {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'consumption', slug: this.slug, tableId: this.tableId(), payload: { productId, quantity: 1 } });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'consumption',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: { productId, quantity: 1 },
+      });
     }
   }
 
@@ -640,10 +764,24 @@ export class PlayerComponent implements OnInit, OnDestroy {
       try {
         await this.api.finishSession(this.slug, this.tableId(), tx);
       } catch {
-        await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', slug: this.slug, tableId: this.tableId(), payload: {} });
+        await this.queue.enqueue({
+          id: crypto.randomUUID(),
+          transactionId: tx,
+          type: 'finish',
+          slug: this.slug,
+          tableId: this.tableId(),
+          payload: {},
+        });
       }
     } else {
-      await this.queue.enqueue({ id: crypto.randomUUID(), transactionId: tx, type: 'finish', slug: this.slug, tableId: this.tableId(), payload: {} });
+      await this.queue.enqueue({
+        id: crypto.randomUUID(),
+        transactionId: tx,
+        type: 'finish',
+        slug: this.slug,
+        tableId: this.tableId(),
+        payload: {},
+      });
     }
     this.endedSummary.set({
       time: finalTime,

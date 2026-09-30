@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { lastValueFrom, timeout } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 
 import {
   AuditLog,
@@ -23,10 +23,14 @@ export class ApiService {
   private readonly base = '/api';
 
   login(userName: string, password: string): Promise<LoginResponse> {
-    return lastValueFrom(this.http.post<LoginResponse>(`${this.base}/auth/login`, { userName, password }));
+    return lastValueFrom(
+      this.http.post<LoginResponse>(`${this.base}/auth/login`, { userName, password }),
+    );
   }
   refresh(refreshToken: string): Promise<LoginResponse> {
-    return lastValueFrom(this.http.post<LoginResponse>(`${this.base}/auth/refresh`, { refreshToken }));
+    return lastValueFrom(
+      this.http.post<LoginResponse>(`${this.base}/auth/refresh`, { refreshToken }),
+    );
   }
   logout(refreshToken: string): Promise<void> {
     return lastValueFrom(this.http.post<void>(`${this.base}/auth/logout`, { refreshToken }));
@@ -35,16 +39,22 @@ export class ApiService {
     return lastValueFrom(this.http.post<void>(`${this.base}/auth/forgot`, { userName }));
   }
   resetPassword(userName: string, code: string, newPassword: string): Promise<void> {
-    return lastValueFrom(this.http.post<void>(`${this.base}/auth/reset`, { userName, code, newPassword }));
+    return lastValueFrom(
+      this.http.post<void>(`${this.base}/auth/reset`, { userName, code, newPassword }),
+    );
   }
   changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
     return lastValueFrom(
-      this.http.post<void>(`${this.base}/auth/change-password`, { userId, currentPassword, newPassword })
+      this.http.post<void>(`${this.base}/auth/change-password`, {
+        userId,
+        currentPassword,
+        newPassword,
+      }),
     );
   }
   forceChangePassword(newPassword: string): Promise<LoginResponse> {
     return lastValueFrom(
-      this.http.post<LoginResponse>(`${this.base}/auth/force-change-password`, { newPassword })
+      this.http.post<LoginResponse>(`${this.base}/auth/force-change-password`, { newPassword }),
     );
   }
 
@@ -52,13 +62,19 @@ export class ApiService {
     return lastValueFrom(this.http.get<TableResponse[]>(`${this.base}/tables`));
   }
   createTable(name: string, hourlyRate: number, code?: string): Promise<TableResponse> {
-    return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables`, { name, hourlyRate, code }));
+    return lastValueFrom(
+      this.http.post<TableResponse>(`${this.base}/tables`, { name, hourlyRate, code }),
+    );
   }
   updateTable(id: string, name: string, hourlyRate: number, code?: string): Promise<TableResponse> {
-    return lastValueFrom(this.http.put<TableResponse>(`${this.base}/tables/${id}`, { name, hourlyRate, code }));
+    return lastValueFrom(
+      this.http.put<TableResponse>(`${this.base}/tables/${id}`, { name, hourlyRate, code }),
+    );
   }
   updateAllRates(hourlyRate: number): Promise<{ updated: number }> {
-    return lastValueFrom(this.http.put<{ updated: number }>(`${this.base}/tables/rate/all`, { hourlyRate }));
+    return lastValueFrom(
+      this.http.put<{ updated: number }>(`${this.base}/tables/rate/all`, { hourlyRate }),
+    );
   }
   attendTable(id: string): Promise<TableResponse> {
     return lastValueFrom(this.http.post<TableResponse>(`${this.base}/tables/${id}/attend`, {}));
@@ -85,27 +101,57 @@ export class ApiService {
     const s = slug || 'demo';
     return lastValueFrom(this.http.get<Product[]>(`${this.base}/t/${s}/products`));
   }
-  startSession(slug: string, id: string, whitePlayerName: string, yellowPlayerName: string, gameMode: 'Managed' | 'FreeMode', transactionId: string): Promise<{ tableId: string; matchId: string }> {
+  startSession(
+    slug: string,
+    id: string,
+    whitePlayerName: string,
+    yellowPlayerName: string,
+    gameMode: 'Managed' | 'FreeMode',
+    transactionId: string,
+  ): Promise<{ tableId: string; matchId: string }> {
     const s = slug || 'demo';
     return lastValueFrom(
-      this.http.post<{ tableId: string; matchId: string }>(`${this.base}/t/${s}/tables/${id}/start`, {
+      this.http.post<{ tableId: string; matchId: string }>(
+        `${this.base}/t/${s}/tables/${id}/start`,
+        {
+          whitePlayerName,
+          yellowPlayerName,
+          gameMode,
+          transactionId,
+        },
+      ),
+    );
+  }
+  score(
+    slug: string,
+    id: string,
+    playerColor: 'white' | 'yellow',
+    delta: number,
+    transactionId: string,
+  ): Promise<{ newScore: number }> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.post<{ newScore: number }>(`${this.base}/t/${s}/tables/${id}/score`, {
+        playerColor,
+        delta,
+        transactionId,
+      }),
+    );
+  }
+  renamePlayers(
+    slug: string,
+    id: string,
+    whitePlayerName: string,
+    yellowPlayerName: string,
+    transactionId: string,
+  ): Promise<void> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.post<void>(`${this.base}/t/${s}/tables/${id}/players`, {
         whitePlayerName,
         yellowPlayerName,
-        gameMode,
         transactionId,
-      })
-    );
-  }
-  score(slug: string, id: string, playerColor: 'white' | 'yellow', delta: number, transactionId: string): Promise<{ newScore: number }> {
-    const s = slug || 'demo';
-    return lastValueFrom(
-      this.http.post<{ newScore: number }>(`${this.base}/t/${s}/tables/${id}/score`, { playerColor, delta, transactionId })
-    );
-  }
-  renamePlayers(slug: string, id: string, whitePlayerName: string, yellowPlayerName: string, transactionId: string): Promise<void> {
-    const s = slug || 'demo';
-    return lastValueFrom(
-      this.http.post<void>(`${this.base}/t/${s}/tables/${id}/players`, { whitePlayerName, yellowPlayerName, transactionId })
+      }),
     );
   }
   callWaiter(slug: string, id: string): Promise<void> {
@@ -114,39 +160,120 @@ export class ApiService {
   }
   requestCheck(slug: string, id: string): Promise<void> {
     const s = slug || 'demo';
-    return lastValueFrom(this.http.post<void>(`${this.base}/t/${s}/tables/${id}/request-check`, {}));
-  }
-  addConsumption(slug: string, id: string, productId: string, quantity: number, transactionId: string): Promise<{ consumptionTotal: number }> {
-    const s = slug || 'demo';
     return lastValueFrom(
-      this.http.post<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${id}/consumption`, { productId, quantity, transactionId })
+      this.http.post<void>(`${this.base}/t/${s}/tables/${id}/request-check`, {}),
     );
   }
-  updateConsumption(slug: string, tableId: string, consumptionId: string, quantity: number, transactionId: string): Promise<{ consumptionTotal: number }> {
+  addConsumption(
+    slug: string,
+    id: string,
+    productId: string,
+    quantity: number,
+    transactionId: string,
+  ): Promise<{ consumptionTotal: number }> {
     const s = slug || 'demo';
     return lastValueFrom(
-      this.http.put<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`, { quantity, transactionId })
+      this.http.post<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${id}/consumption`, {
+        productId,
+        quantity,
+        transactionId,
+      }),
     );
   }
-  deleteConsumption(slug: string, tableId: string, consumptionId: string): Promise<{ consumptionTotal: number }> {
+  updateConsumption(
+    slug: string,
+    tableId: string,
+    consumptionId: string,
+    quantity: number,
+    transactionId: string,
+  ): Promise<{ consumptionTotal: number }> {
     const s = slug || 'demo';
     return lastValueFrom(
-      this.http.delete<{ consumptionTotal: number }>(`${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`)
+      this.http.put<{ consumptionTotal: number }>(
+        `${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`,
+        { quantity, transactionId },
+      ),
     );
   }
-  finishSession(slug: string, id: string, transactionId: string): Promise<{ matchHistoryId: string; grandTotal: number }> {
-    const s = slug || 'demo';
-    return lastValueFrom(this.http.post<{ matchHistoryId: string; grandTotal: number }>(`${this.base}/t/${s}/tables/${id}/finish`, { transactionId }));
-  }
-  finishRound(slug: string, id: string, transactionId: string): Promise<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }> {
+  deleteConsumption(
+    slug: string,
+    tableId: string,
+    consumptionId: string,
+  ): Promise<{ consumptionTotal: number }> {
     const s = slug || 'demo';
     return lastValueFrom(
-      this.http.post<{ id: string; roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null }>(`${this.base}/t/${s}/tables/${id}/finish-round`, { transactionId })
+      this.http.delete<{ consumptionTotal: number }>(
+        `${this.base}/t/${s}/tables/${tableId}/consumption/${consumptionId}`,
+      ),
     );
   }
-  getRounds(slug: string, id: string): Promise<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] }> {
+  finishSession(
+    slug: string,
+    id: string,
+    transactionId: string,
+  ): Promise<{ matchHistoryId: string; grandTotal: number }> {
     const s = slug || 'demo';
-    return lastValueFrom(this.http.get<{ whiteRounds: number; yellowRounds: number; currentRoundNumber: number; rounds: { roundNumber: number; whiteScore: number; yellowScore: number; winnerName: string | null; endedAt: string; durationSeconds: number }[] }>(`${this.base}/t/${s}/tables/${id}/rounds`));
+    return lastValueFrom(
+      this.http.post<{ matchHistoryId: string; grandTotal: number }>(
+        `${this.base}/t/${s}/tables/${id}/finish`,
+        { transactionId },
+      ),
+    );
+  }
+  finishRound(
+    slug: string,
+    id: string,
+    transactionId: string,
+  ): Promise<{
+    id: string;
+    roundNumber: number;
+    whiteScore: number;
+    yellowScore: number;
+    winnerName: string | null;
+  }> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.post<{
+        id: string;
+        roundNumber: number;
+        whiteScore: number;
+        yellowScore: number;
+        winnerName: string | null;
+      }>(`${this.base}/t/${s}/tables/${id}/finish-round`, { transactionId }),
+    );
+  }
+  getRounds(
+    slug: string,
+    id: string,
+  ): Promise<{
+    whiteRounds: number;
+    yellowRounds: number;
+    currentRoundNumber: number;
+    rounds: {
+      roundNumber: number;
+      whiteScore: number;
+      yellowScore: number;
+      winnerName: string | null;
+      endedAt: string;
+      durationSeconds: number;
+    }[];
+  }> {
+    const s = slug || 'demo';
+    return lastValueFrom(
+      this.http.get<{
+        whiteRounds: number;
+        yellowRounds: number;
+        currentRoundNumber: number;
+        rounds: {
+          roundNumber: number;
+          whiteScore: number;
+          yellowScore: number;
+          winnerName: string | null;
+          endedAt: string;
+          durationSeconds: number;
+        }[];
+      }>(`${this.base}/t/${s}/tables/${id}/rounds`),
+    );
   }
 
   getProducts(): Promise<Product[]> {
@@ -188,13 +315,23 @@ export class ApiService {
   getSuperLocals(): Promise<LocalInfo[]> {
     return lastValueFrom(this.http.get<LocalInfo[]>(`${this.base}/super/locals`));
   }
-  createLocal(name: string, password?: string): Promise<{ id: string; name: string; slug: string; defaultPassword: string }> {
-    return lastValueFrom(this.http.post<{ id: string; name: string; slug: string; defaultPassword: string }>(`${this.base}/super/locals`, { name, initialPassword: password || undefined }));
+  createLocal(
+    name: string,
+    password?: string,
+  ): Promise<{ id: string; name: string; slug: string; defaultPassword: string }> {
+    return lastValueFrom(
+      this.http.post<{ id: string; name: string; slug: string; defaultPassword: string }>(
+        `${this.base}/super/locals`,
+        { name, initialPassword: password || undefined },
+      ),
+    );
   }
   getSuperRecoveries(): Promise<RecoveryCode[]> {
     return lastValueFrom(this.http.get<RecoveryCode[]>(`${this.base}/super/recoveries`));
   }
   revealRecovery(id: string): Promise<{ code: string }> {
-    return lastValueFrom(this.http.post<{ code: string }>(`${this.base}/super/recoveries/${id}/reveal`, {}));
+    return lastValueFrom(
+      this.http.post<{ code: string }>(`${this.base}/super/recoveries/${id}/reveal`, {}),
+    );
   }
 }

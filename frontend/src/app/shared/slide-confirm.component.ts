@@ -23,7 +23,6 @@ export class SlideConfirmComponent {
       return;
     }
     this.dragging = true;
-    const el = event.currentTarget as HTMLElement;
     const startX = event.clientX;
     const onMove = (move: PointerEvent) => {
       const delta = move.clientX - startX;
@@ -48,7 +47,12 @@ export class SlideConfirmComponent {
     if (this.completed) {
       return;
     }
-    if (event.key === 'ArrowRight' || event.key === 'End' || event.key === 'Enter' || event.key === ' ') {
+    if (
+      event.key === 'ArrowRight' ||
+      event.key === 'End' ||
+      event.key === 'Enter' ||
+      event.key === ' '
+    ) {
       event.preventDefault();
       this.dragX = this.threshold;
       this.completed = true;

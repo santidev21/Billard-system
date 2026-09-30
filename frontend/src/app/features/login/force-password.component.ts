@@ -15,17 +15,35 @@ import { SpinnerComponent } from '../../shared/spinner.component';
         <h2>Cambia tu clave</h2>
         <p class="hint">Es tu primer ingreso. Define una clave nueva para continuar.</p>
 
-        <label>Nueva clave</label>
-        <input [(ngModel)]="newPassword" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+        <label for="force-new-password">Nueva clave</label>
+        <input
+          id="force-new-password"
+          [(ngModel)]="newPassword"
+          type="password"
+          placeholder="Mínimo 8 caracteres"
+          autocomplete="new-password"
+        />
 
-        <label>Confirmar clave</label>
-        <input [(ngModel)]="confirmPassword" type="password" placeholder="Repite la clave" autocomplete="new-password" />
+        <label for="force-confirm-password">Confirmar clave</label>
+        <input
+          id="force-confirm-password"
+          [(ngModel)]="confirmPassword"
+          type="password"
+          placeholder="Repite la clave"
+          autocomplete="new-password"
+        />
 
         @if (error(); as e) {
           <div class="error">{{ e }}</div>
         }
 
-        <button class="btn btn-primary" [disabled]="loading() || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword" (click)="submit()">
+        <button
+          class="btn btn-primary"
+          [disabled]="
+            loading() || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword
+          "
+          (click)="submit()"
+        >
           @if (loading()) {
             <app-spinner [label]="'Guardando…'" />
           } @else {
@@ -35,16 +53,54 @@ import { SpinnerComponent } from '../../shared/spinner.component';
       </div>
     </section>
   `,
-  styles: [`
-    .login-wrap { display: flex; align-items: center; justify-content: center; flex: 1; padding: 1rem; }
-    .login-card { display: flex; flex-direction: column; gap: 0.6rem; max-width: 360px; width: 100%; }
-    .login-card h2 { margin: 0; }
-    .hint { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
-    label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-    input { padding: 0.55rem 0.75rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--slate-dark); color: var(--text); width: 100%; box-sizing: border-box; }
-    .error { color: var(--red); font-size: 0.85rem; }
-    button { margin-top: 0.3rem; }
-  `],
+  styles: [
+    `
+      .login-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        padding: 1rem;
+      }
+      .login-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        max-width: 360px;
+        width: 100%;
+      }
+      .login-card h2 {
+        margin: 0;
+      }
+      .hint {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin: 0;
+      }
+      label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+      }
+      input {
+        padding: 0.55rem 0.75rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--slate-dark);
+        color: var(--text);
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .error {
+        color: var(--red);
+        font-size: 0.85rem;
+      }
+      button {
+        margin-top: 0.3rem;
+      }
+    `,
+  ],
   standalone: true,
 })
 export class ForcePasswordComponent {

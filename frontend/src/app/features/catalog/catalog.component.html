@@ -6,9 +6,22 @@
   }
 
   <div class="form glass">
-    <input [(ngModel)]="newProductName" placeholder="Nombre del producto" aria-label="Nombre del producto" />
-    <input [(ngModel)]="newProductPrice" type="number" placeholder="Precio" aria-label="Precio del producto" />
-    <button class="btn btn-primary" (click)="addProduct()" [disabled]="loading() || !newProductName.trim() || newProductPrice <= 0">
+    <input
+      [(ngModel)]="newProductName"
+      placeholder="Nombre del producto"
+      aria-label="Nombre del producto"
+    />
+    <input
+      [(ngModel)]="newProductPrice"
+      type="number"
+      placeholder="Precio"
+      aria-label="Precio del producto"
+    />
+    <button
+      class="btn btn-primary"
+      (click)="addProduct()"
+      [disabled]="loading() || !newProductName.trim() || newProductPrice <= 0"
+    >
       @if (loading()) {
         <app-spinner [label]="'Guardando…'" />
       } @else {
@@ -24,7 +37,9 @@
           <li>
             <span>{{ p.name }}</span>
             <b>${{ fmtMoney(p.price) }}</b>
-            <button class="btn btn-outline mini-remove" (click)="removeProduct(p.id)">Eliminar</button>
+            <button class="btn btn-outline mini-remove" (click)="removeProduct(p.id)">
+              Eliminar
+            </button>
           </li>
         } @empty {
           <li class="empty">Sin productos registrados</li>
