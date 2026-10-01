@@ -437,11 +437,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
     // monotonic guard: don't let a stale poll (old StartedAt) overwrite a just-started session (00:00 -> old time bug in FreeMode)
     if (currentStart === null || serverStart > currentStart || m.roundNumber > this.roundNumber()) {
       this.startedAt.set(serverStart);
-    } else if (
-      serverStart !== currentStart &&
-      currentStart !== null &&
-      Math.abs(serverStart - currentStart) < 5000
-    ) {
+    } else if (serverStart !== currentStart && Math.abs(serverStart - currentStart) < 5000) {
       // small clock skew (server vs client Date.now) — sync to server
       this.startedAt.set(serverStart);
     }

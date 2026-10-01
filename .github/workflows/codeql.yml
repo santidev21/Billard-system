@@ -31,14 +31,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # build-mode: none extracts tracked source files only — no build, no
+      # compilation. This deliberately excludes compiler/source-generator output
+      # under obj/ (e.g. Microsoft.AspNetCore.OpenApi's OpenApiXmlCommentSupport
+      # generated at obj/Debug/net10.0/generated/...), which otherwise floods the
+      # results with alerts in code nobody edits. `paths-ignore` in the CodeQL
+      # config does NOT apply to compiled languages, so the exclusion happens here.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
+          build-mode: none
           config-file: ./.github/codeql/codeql-config.yml
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3

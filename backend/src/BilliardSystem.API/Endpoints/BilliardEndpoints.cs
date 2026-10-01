@@ -318,9 +318,11 @@ public static class BilliardEndpoints
                 .FirstOrDefaultAsync(r => r.Id == id && !r.IsResolved, ct);
             if (request is null) return Results.NotFound();
 
+            // Persist the hash of the code being shown, otherwise /auth/reset can
+            // never match it (the hash from request creation belongs to a code that
+            // was never disclosed). Resolution happens on successful reset only.
             var code = GenerateRecoveryCode();
-            var codeHash = HashToken(code);
-            request.Resolve();
+            request.ReplaceCode(HashToken(code));
             await dbContext.SaveChangesAsync(ct);
 
             return Results.Ok(new { code, userName = request.User?.UserName });
@@ -612,9 +614,8 @@ public static class BilliardEndpoints
         {
             var tenantId = user.GetTenantId();
             if (tenantId is null) return Results.Forbid();
-            foreach (var pair in values)
+            foreach (var pair in values.Where(pair => AllowedSettingKeys.Contains(pair.Key)))
             {
-                if (!AllowedSettingKeys.Contains(pair.Key)) continue;
                 var setting = await dbContext.Settings.FirstOrDefaultAsync(s => s.TenantId == tenantId && s.Key == pair.Key, ct);
                 if (setting is null) dbContext.Settings.Add(new AppSetting(pair.Key, pair.Value, tenantId));
                 else setting.Update(pair.Value);
@@ -1121,7 +1122,14 @@ public static class BilliardEndpoints
         if (transactionId is null) return;
         if (await dbContext.IdempotencyKeys.AnyAsync(k => k.TransactionId == transactionId, ct)) return;
         dbContext.IdempotencyKeys.Add(new IdempotencyKey(transactionId.Value));
-        try { await dbContext.SaveChangesAsync(ct); } catch { /* duplicate */ }
+        try
+        {
+            await dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Duplicate key: a concurrent request already recorded this transaction.
+        }
     }
 
     private static async Task WriteAuditAsync(BilliardDbContext dbContext, AuditActionType actionType,
