@@ -195,7 +195,7 @@ public static class BilliardEndpoints
             }
 
             var pendingExists = await dbContext.RecoveryRequests.AnyAsync(
-                r => r.UserId == user.Id && !r.IsResolved && !r.IsExpired(), cancellationToken);
+                r => r.UserId == user.Id && r.ResolvedAt == null && r.ExpiresAt > DateTimeOffset.UtcNow, cancellationToken);
             if (pendingExists)
             {
                 return Results.Ok(new { message = "Ya hay un código activo. Solicítalo a tu administrador." });
@@ -233,7 +233,7 @@ public static class BilliardEndpoints
 
             var codeHash = HashToken(request.Code);
             var recovery = await dbContext.RecoveryRequests.FirstOrDefaultAsync(
-                r => r.UserId == user.Id && r.CodeHash == codeHash && !r.IsResolved, cancellationToken);
+                r => r.UserId == user.Id && r.CodeHash == codeHash && r.ResolvedAt == null, cancellationToken);
 
             if (recovery is null || recovery.IsExpired())
             {
@@ -303,7 +303,7 @@ public static class BilliardEndpoints
                 .AsNoTracking()
                 .Include(r => r.User)
                 .Include(r => r.Tenant)
-                .Where(r => !r.IsResolved && r.ExpiresAt > DateTimeOffset.UtcNow)
+                .Where(r => r.ResolvedAt == null && r.ExpiresAt > DateTimeOffset.UtcNow)
                 .OrderByDescending(r => r.CreatedAt)
                 .Select(r => new RecoveryCodeResponse(r.Id, r.Tenant!.Name, r.User!.UserName, r.CreatedAt, r.ExpiresAt))
                 .ToListAsync(ct);
@@ -315,7 +315,7 @@ public static class BilliardEndpoints
         {
             var request = await dbContext.RecoveryRequests
                 .Include(r => r.User)
-                .FirstOrDefaultAsync(r => r.Id == id && !r.IsResolved, ct);
+                .FirstOrDefaultAsync(r => r.Id == id && r.ResolvedAt == null, ct);
             if (request is null) return Results.NotFound();
 
             // Persist the hash of the code being shown, otherwise /auth/reset can
@@ -665,6 +665,7 @@ public static class BilliardEndpoints
             table.StartSession(match.Id, request.WhitePlayerName, request.YellowPlayerName, null);
             dbContext.MatchHistories.Add(match);
             await dbContext.SaveChangesAsync(ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("SessionStarted", new { tableId = table.Id, matchId = match.Id }, ct);
             await hub.Clients.Group($"admins:{tenant.Id}").SendAsync("TableStateUpdated", new { tableId = table.Id, status = "Occupied" }, ct);
@@ -754,6 +755,7 @@ public static class BilliardEndpoints
             var consumption = match.AddConsumption(product.Id, product.Name, product.Price, request.Quantity);
             dbContext.MatchConsumptions.Add(consumption);
             await dbContext.SaveChangesAsync(ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
@@ -782,6 +784,7 @@ public static class BilliardEndpoints
 
             match.UpdateConsumption(consumptionId, request.Quantity);
             await dbContext.SaveChangesAsync(ct);
+            await MarkIdempotentAsync(dbContext, request.TransactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
@@ -809,6 +812,7 @@ public static class BilliardEndpoints
 
             match.RemoveConsumption(consumptionId);
             await dbContext.SaveChangesAsync(ct);
+            await MarkIdempotentAsync(dbContext, transactionId, ct);
 
             await hub.Clients.Group($"table:{id}").SendAsync("ConsumptionAdded", new
             {
