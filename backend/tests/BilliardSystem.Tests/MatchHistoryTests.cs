@@ -154,6 +154,7 @@ public sealed class MatchHistoryTests
         var t1 = t0.AddSeconds(20);
         var t2 = t0.AddSeconds(50);
         var r1 = match.CloseRound(t1);
+        r1.Should().NotBeNull();
         match.AddScore("yellow", 3, null);
         var final = match.TryCloseFinalRound(t2);
         final.Should().NotBeNull();

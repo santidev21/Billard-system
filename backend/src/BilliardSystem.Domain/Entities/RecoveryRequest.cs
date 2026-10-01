@@ -29,6 +29,15 @@ public sealed class RecoveryRequest : Entity
 
     public bool IsExpired() => DateTimeOffset.UtcNow >= ExpiresAt;
 
+    /// <summary>
+    /// Replaces the stored code hash with the hash of a newly revealed code,
+    /// so the last revealed code is the one <c>/auth/reset</c> will match.
+    /// </summary>
+    public void ReplaceCode(string codeHash)
+    {
+        CodeHash = codeHash;
+    }
+
     public void Resolve()
     {
         ResolvedAt = DateTimeOffset.UtcNow;

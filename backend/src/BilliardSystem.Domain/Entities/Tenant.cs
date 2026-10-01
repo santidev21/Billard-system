@@ -50,12 +50,9 @@ public sealed class Tenant : Entity
             .Replace('_', '-');
 
         var result = new StringBuilder(slug.Length);
-        foreach (var c in slug)
+        foreach (var c in slug.Where(c => char.IsLetterOrDigit(c) || c == '-'))
         {
-            if (char.IsLetterOrDigit(c) || c == '-')
-            {
-                result.Append(c);
-            }
+            result.Append(c);
         }
 
         var finalSlug = result.ToString().Trim('-');

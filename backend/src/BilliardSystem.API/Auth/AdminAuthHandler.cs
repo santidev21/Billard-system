@@ -46,38 +46,31 @@ public sealed class AdminAuthHandler : AuthenticationHandler<AdminAuthOptions>
 
         var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-        var scope = Context.RequestServices.CreateScope();
-        try
+        using var scope = Context.RequestServices.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<BilliardDbContext>();
+
+        var session = await dbContext.Sessions
+            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash);
+
+        if (session is null || !session.IsValid())
         {
-            var dbContext = scope.ServiceProvider.GetRequiredService<BilliardDbContext>();
-
-            var session = await dbContext.Sessions
-                .FirstOrDefaultAsync(s => s.TokenHash == tokenHash);
-
-            if (session is null || !session.IsValid())
-            {
-                return AuthenticateResult.Fail("Sesión inválida o expirada.");
-            }
-
-            if (DateTimeOffset.UtcNow - session.LastUsedAt > TimeSpan.FromHours(RefreshThresholdHours))
-            {
-                session.Touch();
-                await dbContext.SaveChangesAsync();
-            }
-
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.Name, "Admin"),
-                new Claim("session_id", session.Id.ToString())
-            };
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, Scheme.Name);
-            return AuthenticateResult.Success(ticket);
+            return AuthenticateResult.Fail("Sesión inválida o expirada.");
         }
-        finally
+
+        if (DateTimeOffset.UtcNow - session.LastUsedAt > TimeSpan.FromHours(RefreshThresholdHours))
         {
-            (scope as IDisposable)?.Dispose();
+            session.Touch();
+            await dbContext.SaveChangesAsync();
         }
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, "Admin"),
+            new Claim("session_id", session.Id.ToString())
+        };
+        var identity = new ClaimsIdentity(claims, Scheme.Name);
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+        return AuthenticateResult.Success(ticket);
     }
 }
