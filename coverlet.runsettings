@@ -8,11 +8,23 @@
           <Exclude>[*.Tests]*</Exclude>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
           <!--
-            Floor, not a target: the backend test suite is still very small
-            (~13 tests, ~2% line coverage). This only prevents regressions;
-            raise it as tests are added.
+            EF Core migration scaffolding is auto-generated and applied verbatim by
+            the startup initializer, so coverlet reports it as ~100% covered and it
+            dominates the denominator (~70% of all coverable lines). Exclude the
+            generated Designer/snapshot files; migration Up/Down logic stays in scope.
           -->
-          <Threshold>1</Threshold>
+          <ExcludeByFile>**/Migrations/*.Designer.cs,**/Migrations/*ModelSnapshot.cs</ExcludeByFile>
+          <!--
+            Floor, not a target. The domain/application/persistence layers measure
+            ~90% and the integration suite exercises the API flows, so 80% is a
+            comfortable ratchet from the previous 1%.
+
+            Caveat: coverlet attributes every lambda of the single
+            MapBilliardEndpoints method to that method, so a line in an untested
+            endpoint is reported as covered. The endpoint-file number is therefore
+            optimistic; the domain/persistence numbers are the reliable signal.
+          -->
+          <Threshold>80</Threshold>
           <ThresholdType>line</ThresholdType>
           <ThresholdStat>total</ThresholdStat>
         </Configuration>

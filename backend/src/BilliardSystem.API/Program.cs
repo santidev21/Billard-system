@@ -112,3 +112,7 @@ app.MapHub<TableHub>("/hubs/tables");
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+// Exposed so the integration tests can boot the real pipeline through
+// WebApplicationFactory<Program>.
+public partial class Program;
